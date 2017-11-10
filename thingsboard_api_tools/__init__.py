@@ -2,11 +2,11 @@ import json, requests, sys
 from http import HTTPStatus
 
 # Will be set below
-motherShipUrl = ''
+mothership_url = ''
 
-def setMotherShipUrl(url):
-    global motherShipUrl
-    motherShipUrl = url
+def set_mothership_url(url):
+    global mothership_url
+    mothership_url = url
 
 
 
@@ -78,7 +78,7 @@ def get_token(username, password):
     headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
     # json = post("/api/auth/login", None, data, "Error requesting token")
 
-    url = motherShipUrl + "/api/auth/login"
+    url = mothership_url + "/api/auth/login"
     response = requests.post(url, data=data, headers=headers)
     validateResponse(response, "Error requesting token")
 
@@ -211,7 +211,7 @@ def pretty_print_request(req):
 
 
 def get(token, params, msg):
-    url = motherShipUrl + params
+    url = mothership_url + params
     headers = {'Accept': 'application/json'}
     if token is not None:
         headers['X-Authorization'] = 'Bearer ' + token
@@ -228,7 +228,7 @@ def get(token, params, msg):
 
 
 def delete(token, params, msg):
-    url = motherShipUrl + params
+    url = mothership_url + params
     headers = {'Accept': 'application/json'}
     if token is not None:
         headers['X-Authorization'] = 'Bearer ' + token
@@ -250,7 +250,7 @@ def delete(token, params, msg):
 
 
 def post(token, params, data, msg):
-    url = motherShipUrl + params
+    url = mothership_url + params
     headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
     if token is not None:
         headers['X-Authorization'] = 'Bearer ' + token
