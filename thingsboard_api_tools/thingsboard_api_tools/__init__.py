@@ -147,36 +147,22 @@ def get_device_by_name(token, device_name):
 
 
 
-def get_device_name(customer_name):
-    return customer_name + ' Device'
-
-
-
 ''' Returns device object '''
-def add_device(token, customer_name, device_type, latitude, longitude):
-    if latitude is None or longitude is None:
-        print("Must have valid lat/lon in order to add device!")
-        exit(1)
+def add_device(token, device_name, device_type, shared_attributes, server_attributes):
 
     data = {
-        "name": get_device_name(customer_name),
+        "name": device_name,
         "type": device_type,
     }
 
-    device = post(token, '/api/device', data, "Error adding device '" +  device_type +"' for '" + customer_name + "'")
+    device = post(token, '/api/device', data, "Error adding device")
     device_id = get_id(device)
 
-    data = {
-        "latitude": latitude,
-        "longitude": longitude
-    }
-    set_server_attributes(token, device_id, data)
+    if server_attributes is not None:
+        set_server_attributes(token, device_id, data)
 
-    data = {
-        "LED": "Unknown",
-        "nonce": 0
-    }
-    set_shared_attributes(token, device_id, data)
+    if shared_attributes is not None:
+        set_shared_attributes(token, device_id, data)
     
     return device
 
