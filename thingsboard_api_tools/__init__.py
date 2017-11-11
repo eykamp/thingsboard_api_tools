@@ -8,19 +8,9 @@ def get_token(mothership_url, username, password):
 
     url = mothership_url + "/api/auth/login"
     response = requests.post(url, data=data, headers=headers)
-    validateResponse(response, "Error requesting token")
+    TbApi.validateResponse(response, "Error requesting token")
 
     return json.loads(response.text)["token"]
-
-
-
-# Will be set below
-mothership_url = ''
-
-def set_mothership_url(url):
-    global mothership_url
-    mothership_url = url
-
 
 
 
@@ -33,7 +23,6 @@ class TbApi:
         self.password = password
 
         self.token = get_token(url, username, password)
-
 
 
     ''' Return a list of all customers in the system '''
@@ -55,11 +44,9 @@ class TbApi:
         return get_user_uuid(self.token, 'public')
 
 
-
     ''' Returns UUID of named customer, or None if user not found '''
     def get_user_uuid(self, name):
         return get_id(get_customer(self.token, name))
-
 
 
     ''' Adds customer and returns JSON customer from database '''
@@ -79,11 +66,9 @@ class TbApi:
         return post(self.token, '/api/customer', data, "Error adding customer '" + name + "'")
 
 
-
     ''' Returns true if successful, False if the customer wasn't found '''
     def delete_customer_by_id(self, id):
         return delete(self.token, "/api/customer/" + id, "Error deleting customer '" + id + "'")
-
 
 
     ''' Returns True if successful, False if the customer wasn't found '''
@@ -96,17 +81,14 @@ class TbApi:
         return delete_customer_by_id(self.token, id)
 
 
-
     ''' Returns dashboard definition '''
     def assign_dash_to_user(self, dashboard_id, customer_id):
         return post(self.token, '/api/customer/' + customer_id + '/dashboard/' + dashboard_id, None, "Could not assign dashboard '" + dashboard_id + "' to customer '" + customer_id + "'")
 
 
-
     ''' Returns True if dashboard was deleted, False if it did not exist '''
     def delete_dashboard(self, dashboard_id):
         return delete(self.token, '/api/dashboard/' + dashboard_id, "Error deleting dashboard '" + dashboard_id +"'")
-
 
 
     ''' Returns dashboard definition '''
@@ -123,7 +105,6 @@ class TbApi:
         return post(self.token, '/api/dashboard', data, "Error creating new dashboard")
 
 
-
     ''' Returns dashboard with specified name, or None if we can't find one '''
     def get_dashboard_by_name(self, dash_name):
         dashes = get(self.token, self.mothership_url, '/api/tenant/dashboards?limit=99999&textSearch=' + dash_name, "Error retrieving dashboard '" + dash_name + "'")['data']
@@ -134,16 +115,13 @@ class TbApi:
         return None
 
 
-
     ''' Retrieve dashboard by id '''
     def get_dashboard_by_id(self, dash_id):
         return get(self.token, self.mothership_url, '/api/dashboard/info/' + dash_id, "Error retrieving dashboard '" + dash_id + "'")
 
 
-
     def get_dashboard_definition(self, dash_id):
         return get(self.token, self.mothership_url, '/api/dashboard/' + dash_id, "Error retrieving dashboard definition '" + dash_id + "'")
-
 
 
     ''' Returns named device object, or None if it can't be found '''
@@ -154,7 +132,6 @@ class TbApi:
                 return device
 
         return None
-
 
 
     ''' Returns device object '''
@@ -177,20 +154,16 @@ class TbApi:
         return device
 
 
-
     def set_server_attributes(self, device_id, attributes):
         set_attributes(self.token, device_id, attributes, 'SERVER_SCOPE')
-
 
 
     def set_shared_attributes(self, device_id, attributes):
         set_attributes(self.token, device_id, attributes, 'SHARED_SCOPE')
 
 
-
     def set_attributes(self, device_id, attributes, scope):
         post(self.token, '/api/plugins/telemetry/DEVICE/' + device_id + '/' + scope, attributes, "Error setting " + scope + " attributes for device '" + device_id + "'")
-
 
 
     ''' Works with Customers, Devices, Dashes '''
@@ -201,11 +174,9 @@ class TbApi:
         return obj['id']['id']
 
 
-
     ''' Returns device object we just made pubic '''
     def assign_device_to_public_user(self, device_id):
         return post(self.token, '/api/customer/public/device/' + device_id, None, "Error assigning device '" + device_id + "' to public customer")
-
 
 
     ''' Returns True if device was deleted, False if it did not exist '''
@@ -213,10 +184,8 @@ class TbApi:
         return delete(self.token, '/api/device/' + device_id, "Error deleting device '" +  device_id +"'")
 
 
-
     def pretty_print_request(req):
         print('{}\n{}\n{}\n\n{}'.format('-----------START-----------', req.method + ' ' + req.url, '\n'.join('{}: {}'.format(k, v) for k, v in req.headers.items()), req.body, ))
-
 
 
     def get(token, mothership_url, params, msg):
@@ -233,7 +202,6 @@ class TbApi:
         validateResponse(response, msg)
 
         return json.loads(response.text)
-
 
 
     def delete(token, params, msg):
@@ -257,7 +225,6 @@ class TbApi:
         return True
 
 
-
     def post(token, params, data, msg):
         url = mothership_url + params
         headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
@@ -275,7 +242,6 @@ class TbApi:
             return { }
 
         return json.loads(response.text)
-
 
 
     def validateResponse(response, msg):
