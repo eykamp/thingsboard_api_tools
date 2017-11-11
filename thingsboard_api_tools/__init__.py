@@ -99,9 +99,8 @@ def delete_dashboard(token, dashboard_id):
 
 
 ''' Returns dashboard definition '''
-def create_dashboard_for_customer(token, customer_name, dash_def):
+def create_dashboard_for_customer(token, dash_name, dash_def):
 
-    dash_name = customer_name + ' Dash' 
     data = {
         "configuration": dash_def["configuration"],
         "title": dash_name,
