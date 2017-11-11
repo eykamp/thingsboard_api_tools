@@ -1,4 +1,4 @@
-import json, requests, sys, time
+import json, requests, time
 from http import HTTPStatus
 
 
