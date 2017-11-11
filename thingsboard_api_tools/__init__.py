@@ -1,29 +1,38 @@
-import json, requests, sys
+import json, requests, sys, time
 from http import HTTPStatus
 
 
 class TbApi:
 
-    def __init__(self, url, username, password):
+    def __init__(self, url, username, password, token_timeout=600):  # 10 minutes
         self.mothership_url = url
         self.username = username
         self.password = password
+        self.token_timeout = token_timeout  # In seconds
 
-        self.token = self.get_token(url, username, password)
+        self.token_time = 0
+        self.token = None
 
 
-    ''' Returns the access token needed by most other methods '''
-    @staticmethod
-    def get_token(mothership_url, username, password):
-        data = '{"username":"' + username + '", "password":"' + password + '"}'
+    ''' Fetches and return an access token needed by most other methods; caches tokens for reuse '''
+    def get_token(self):
+
+        # If we already have a valid token, use it
+        if self.token is not None and time.time() - self.token_time < self.token_timeout:
+            return self.token
+
+        data = '{"username":"' + self.username + '", "password":"' + self.password + '"}'
         headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
         # json = post("/api/auth/login", None, data, "Error requesting token")
 
-        url = mothership_url + "/api/auth/login"
+        url = self.mothership_url + "/api/auth/login"
         response = requests.post(url, data=data, headers=headers)
-        TbApi.validate_response(response, "Error requesting token")
+        self.validate_response(response, "Error requesting token")
 
-        return json.loads(response.text)["token"]
+        self.token = json.loads(response.text)["token"]
+        self.token_time = time.time()
+
+        return self.token
 
 
     ''' Return a list of all customers in the system '''
@@ -177,7 +186,6 @@ class TbApi:
         return obj['id']['id']
 
 
-    ''' Returns device object we just made pubic '''
     def assign_device_to_public_user(self, device_id):
         return self.post('/api/customer/public/device/' + device_id, None, "Error assigning device '" + device_id + "' to public customer")
 
@@ -194,8 +202,9 @@ class TbApi:
 
     ''' Modifies headers '''
     def add_auth_header(self, headers):
-        if self.token is not None:
-            headers['X-Authorization'] = 'Bearer ' + self.token
+        token = self.get_token()
+        if token is not None:
+            headers['X-Authorization'] = 'Bearer ' + token
             
         
 
@@ -261,4 +270,4 @@ class TbApi:
             print("----- BEGIN BODY -----")
             print(response.content)
             print("----- END BODY -----")
-           raise
+            raise
