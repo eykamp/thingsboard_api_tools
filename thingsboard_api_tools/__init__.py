@@ -21,7 +21,7 @@ class TbApi:
 
         url = mothership_url + "/api/auth/login"
         response = requests.post(url, data=data, headers=headers)
-        TbApi.validateResponse(response, "Error requesting token")
+        TbApi.validate_response(response, "Error requesting token")
 
         return json.loads(response.text)["token"]
 
@@ -209,7 +209,7 @@ class TbApi:
         # pretty_print_request(prepared)
 
         response = requests.get(url, headers=headers)
-        self.validateResponse(response, msg)
+        self.validate_response(response, msg)
 
         return json.loads(response.text)
 
@@ -229,7 +229,7 @@ class TbApi:
         if(response.status_code == HTTPStatus.NOT_FOUND):
             return False
 
-        self.validateResponse(response, msg)
+        self.validate_response(response, msg)
 
         return True
 
@@ -244,7 +244,7 @@ class TbApi:
         # pretty_print_request(prepared)
 
         response = requests.post(url, json=data, headers=headers)
-        self.validateResponse(response, msg)
+        self.validate_response(response, msg)
 
         if response.text is None or response.text == "":
             return { }
@@ -253,7 +253,7 @@ class TbApi:
 
 
     @staticmethod
-    def validateResponse(response, msg):
+    def validate_response(response, msg):
         try:
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
@@ -261,4 +261,4 @@ class TbApi:
             print("----- BEGIN BODY -----")
             print(response.content)
             print("----- END BODY -----")
-            sys.exit(1)
+           raise
