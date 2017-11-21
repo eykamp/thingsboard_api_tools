@@ -177,6 +177,9 @@ class TbApi:
         self.post('/api/plugins/telemetry/DEVICE/' + device_id + '/' + scope, attributes, "Error setting " + scope + " attributes for device '" + device_id + "'")
 
 
+    def send_telemetry(self, device_token, data):
+        self.post('/api/v1/' + device_token + '/telemetry', data, "Error setting " + scope + " attributes for device with token '" + device_token + "'")
+
     ''' Works with Customers, Devices, Dashes '''
     @staticmethod
     def get_id(obj):
