@@ -178,7 +178,7 @@ class TbApi:
 
 
     def send_telemetry(self, device_token, data):
-        self.post('/api/v1/' + device_token + '/telemetry', data, "Error setting " + scope + " attributes for device with token '" + device_token + "'")
+        self.post('/api/v1/' + device_token + '/telemetry', data, "Error sending telemetry for device with token '" + device_token + "'")
 
     ''' Works with Customers, Devices, Dashes '''
     @staticmethod
