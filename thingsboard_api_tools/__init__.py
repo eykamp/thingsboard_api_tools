@@ -166,7 +166,7 @@ class TbApi:
 
 
     def get_device_token(self, device_id):
-        json = self.get("/api/device/" + device_id + "/credentials", "Error retreiving device_key for device '" + device_id + "'"))
+        json = self.get("/api/device/" + device_id + "/credentials", "Error retreiving device_key for device '" + device_id + "'")
         return json["credentialsId"]
 
     def set_server_attributes(self, device_id, attributes):
