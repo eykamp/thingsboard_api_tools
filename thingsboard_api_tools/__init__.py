@@ -222,7 +222,7 @@ class TbApi:
 
         # req = requests.Request('GET', url, headers=headers)
         # prepared = req.prepare()
-        # pretty_print_request(prepared)
+        # TbApi.pretty_print_request(prepared)
 
         response = requests.get(url, headers=headers)
         self.validate_response(response, msg)
@@ -237,7 +237,7 @@ class TbApi:
 
         # req = requests.Request('DELETE', url, headers=headers)
         # prepared = req.prepare()
-        # pretty_print_request(prepared)
+        # TbApi.pretty_print_request(prepared)
 
         response = requests.delete(url, headers=headers)
 
@@ -257,7 +257,7 @@ class TbApi:
 
         # req = requests.Request('POST', url, json=data, headers=headers)
         # prepared = req.prepare()
-        # pretty_print_request(prepared)
+        # TbApi.pretty_print_request(prepared)
 
         response = requests.post(url, json=data, headers=headers)
         self.validate_response(response, msg)
