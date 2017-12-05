@@ -157,10 +157,10 @@ class TbApi:
         device_id = self.get_id(device)
 
         if server_attributes is not None:
-            self.set_server_attributes(device_id, data)
+            self.set_server_attributes(device_id, server_attributes)
 
         if shared_attributes is not None:
-            self.set_shared_attributes(device_id, data)
+            self.set_shared_attributes(device_id, shared_attributes)
         
         return device
 
