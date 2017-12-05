@@ -181,8 +181,54 @@ class TbApi:
         self.post('/api/plugins/telemetry/DEVICE/' + device_id + '/' + scope, attributes, "Error setting " + scope + " attributes for device '" + device_id + "'")
 
 
+    # Note that this requires the device's secret token, not the device_id!
     def send_telemetry(self, device_token, data):
-        self.post('/api/v1/' + device_token + '/telemetry', data, "Error sending telemetry for device with token '" + device_token + "'")
+        self.post("/api/v1/" + device_token + "/telemetry", data, "Error sending telemetry for device with token '" + device_token + "'")
+
+
+    def get_telemetry_keys(self, device_id):
+        return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/keys/timeseries", "Error retrieving telemetry keys for device '" + device_id + "'")
+
+
+    # Pass a single key, a stringified comma-separate list, a list object, or a touple
+    def get_latest_telemetry(self, device_id, telemetry_keys):
+        if isinstance(telemetry_keys, str):
+            keys = telemetry_keys
+        else:
+            keys = ','.join(telemetry_keys)
+
+        return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/values/timeseries?keys=" + keys, "Error retrieving latest telemetry for device '" + device_id + "' with keys '" + keys + "'")
+
+  
+    # Pass a single key, a stringified comma-separate list, a list object, or a touple
+    def get_telemetry(self, device_id, telemetry_keys, startTime=None, endTime=None, interval=None, limit=None, agg=None):
+
+        if isinstance(telemetry_keys, str):
+            keys = telemetry_keys
+        else:
+            keys = ','.join(telemetry_keys)
+
+        if startTime is None:
+            startTime = 0
+
+        if endTime is None:
+            endTime = int(time.time())       # Unix timestamp, now
+
+        if interval is None:
+            interval = 60000   # in ms
+
+        if limit is None:            
+            limit = 100
+
+        if agg is None:
+            agg = "NONE"   # MIN, MAX, AVG, SUM, COUNT, NONE
+
+        return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/values/timeseries?keys=" + keys + "&startTs=" + str(int(startTime)) + "&endTs=" + str(int(endTime)) + "&interval=" + str(interval) + "&limit=" + str(limit) + "&agg=" + agg, "Error retrieving telemetry for device '" + device_id + "' with date range '" + str(int(startTime)) + "-" + str(int(endTime)) + "' and keys '" + keys + "'")
+
+
+    def delete_telemetry(self, device_id, key, timestamp):
+        return self.delete("/api/plugins/telemetry/DEVICE/" + device_id + "/timeseries/values?key=" + key + "&ts=" + str(int(timestamp)), "Error deleting telemetry for device '" + device_id + "'")
+
 
     ''' Works with Customers, Devices, Dashes '''
     @staticmethod
