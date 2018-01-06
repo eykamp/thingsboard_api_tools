@@ -13,6 +13,8 @@ class TbApi:
         self.token_time = 0
         self.token = None
 
+        self.verbose = False
+
 
     ''' Fetches and return an access token needed by most other methods; caches tokens for reuse '''
     def get_token(self):
@@ -266,9 +268,10 @@ class TbApi:
         headers = {'Accept': 'application/json'}
         self.add_auth_header(headers)
 
-        # req = requests.Request('GET', url, headers=headers)
-        # prepared = req.prepare()
-        # TbApi.pretty_print_request(prepared)
+        if self.verbose:
+            req = requests.Request('GET', url, headers=headers)
+            prepared = req.prepare()
+            TbApi.pretty_print_request(prepared)
 
         response = requests.get(url, headers=headers)
         self.validate_response(response, msg)
@@ -281,9 +284,10 @@ class TbApi:
         headers = {'Accept': 'application/json'}
         self.add_auth_header(headers)
 
-        # req = requests.Request('DELETE', url, headers=headers)
-        # prepared = req.prepare()
-        # TbApi.pretty_print_request(prepared)
+        if self.verbose:
+            req = requests.Request('DELETE', url, headers=headers)
+            prepared = req.prepare()
+            TbApi.pretty_print_request(prepared)
 
         response = requests.delete(url, headers=headers)
 
@@ -301,9 +305,10 @@ class TbApi:
         headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
         self.add_auth_header(headers)
 
-        # req = requests.Request('POST', url, json=data, headers=headers)
-        # prepared = req.prepare()
-        # TbApi.pretty_print_request(prepared)
+        if self.verbose:
+            req = requests.Request('POST', url, json=data, headers=headers)
+            prepared = req.prepare()
+            TbApi.pretty_print_request(prepared)
 
         response = requests.post(url, json=data, headers=headers)
         self.validate_response(response, msg)
