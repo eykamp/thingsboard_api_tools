@@ -214,7 +214,7 @@ class TbApi:
             startTime = 0
 
         if endTime is None:
-            endTime = int(time.time())       # Unix timestamp, now
+            endTime = int(time.time() * 1000)       # Unix timestamp, now, convert to milliseconds
 
         if interval is None:
             interval = 60000   # in ms
