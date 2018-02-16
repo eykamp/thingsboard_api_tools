@@ -171,21 +171,43 @@ class TbApi:
         json = self.get("/api/device/" + device_id + "/credentials", "Error retreiving device_key for device '" + device_id + "'")
         return json["credentialsId"]
 
+
+    def get_server_attributes(self, device_id):
+        return self.get_attributes(device_id, 'SERVER_SCOPE')
+
+
+    def get_shared_attributes(self, device_id):
+        return self.get_attributes(device_id, 'SHARED_SCOPE')
+
+
+    def get_client_attributes(self, device_id):
+        return self.get_attributes(device_id, 'CLIENT_SCOPE')
+
+
+    def get_attributes(self, device_id, scope):
+        return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/values/attributes/" + scope, "Error retrieving " + scope + " attributes for '" + device_id + "'")
+
+
     def set_server_attributes(self, device_id, attributes):
-        self.set_attributes(device_id, attributes, 'SERVER_SCOPE')
+        return self.set_attributes(device_id, attributes, 'SERVER_SCOPE')
 
 
     def set_shared_attributes(self, device_id, attributes):
-        self.set_attributes(device_id, attributes, 'SHARED_SCOPE')
+        return self.set_attributes(device_id, attributes, 'SHARED_SCOPE')
+
+
+    def set_client_attributes(self, device_id, attributes):
+        return self.set_attributes(device_id, attributes, 'CLIENT_SCOPE')
 
 
     def set_attributes(self, device_id, attributes, scope):
-        self.post('/api/plugins/telemetry/DEVICE/' + device_id + '/' + scope, attributes, "Error setting " + scope + " attributes for device '" + device_id + "'")
+        return self.post('/api/plugins/telemetry/DEVICE/' + device_id + '/' + scope, attributes, "Error setting " + scope + " attributes for device '" + device_id + "'")
+
 
 
     # Note that this requires the device's secret token, not the device_id!
     def send_telemetry(self, device_token, data):
-        self.post("/api/v1/" + device_token + "/telemetry", data, "Error sending telemetry for device with token '" + device_token + "'")
+        return self.post("/api/v1/" + device_token + "/telemetry", data, "Error sending telemetry for device with token '" + device_token + "'")
 
 
     def get_telemetry_keys(self, device_id):
@@ -201,7 +223,6 @@ class TbApi:
 
         return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/values/timeseries?keys=" + keys, "Error retrieving latest telemetry for device '" + device_id + "' with keys '" + keys + "'")
 
-  
     # Pass a single key, a stringified comma-separate list, a list object, or a touple
     def get_telemetry(self, device_id, telemetry_keys, startTime=None, endTime=None, interval=None, limit=None, agg=None):
 
@@ -325,7 +346,7 @@ class TbApi:
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             print(msg + "! " + str(e))
-            print("----- BEGIN BODY -----")
+            print("----- BEGIN RESPONSE BODY -----")
             print(response.content)
-            print("----- END BODY -----")
+            print("----- END RESPONSE BODY -----")
             raise
