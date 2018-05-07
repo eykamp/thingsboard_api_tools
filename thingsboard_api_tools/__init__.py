@@ -90,7 +90,7 @@ class TbApi:
         if phone is not None:
             cust["phone"] = phone
 
-        return self.post('/api/customer', data, "Error updating customer")
+        return self.post('/api/customer', cust, "Error updating customer")
 
     ''' Adds customer and returns JSON customer from database '''
     def add_customer(self, name, address, address2, city, state, zip, country, email, phone):
