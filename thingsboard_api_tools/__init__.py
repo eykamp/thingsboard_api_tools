@@ -57,7 +57,7 @@ class TbApi:
         if not isinstance(cust, str):
             cust = self.get_id(cust)
 
-        return self.get('/api/customer/' + cust + '/devices?limit=99999', "Error retrieving devices for customer '" + cust + "'")["devices"]
+        return self.get('/api/customer/' + cust + '/devices?limit=99999', "Error retrieving devices for customer '" + cust + "'")["data"]
 
 
     ''' Returns UUID of public customer, or None if there is none '''
