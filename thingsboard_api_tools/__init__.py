@@ -82,7 +82,7 @@ class TbApi:
         if state is not None:
             cust["state"] = state
         if zip is not None:
-            cust["zip")]= zip
+            cust["zip"]= zip
         if country is not None:
             cust["country"] = country
         if email is not None:
