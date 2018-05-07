@@ -44,7 +44,7 @@ class TbApi:
 
     ''' Get customer with specified name '''
     def get_customer(self, name):
-        customers = self.get('/api/customers?limit=99999&textSearch=' + name, "Can't find customer with name'" + name + "'")
+        customers = self.get('/api/customers?limit=99999&textSearch=' + name, "Can't find customer with name '" + name + "'")
         for customer in customers['data']:
             if(customer['title'] == name):
                 return customer
