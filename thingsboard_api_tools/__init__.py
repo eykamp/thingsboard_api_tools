@@ -211,36 +211,49 @@ class TbApi:
         return json["credentialsId"]
 
 
-    def get_server_attributes(self, device_id):
-        return self.get_attributes(device_id, 'SERVER_SCOPE')
+    ''' Pass in a device or a device_id '''
+    def get_server_attributes(self, device):
+        return self.get_attributes(device, 'SERVER_SCOPE')
 
 
-    def get_shared_attributes(self, device_id):
-        return self.get_attributes(device_id, 'SHARED_SCOPE')
+    ''' Pass in a device or a device_id '''
+    def get_shared_attributes(self, device):
+        return self.get_attributes(device, 'SHARED_SCOPE')
 
 
-    def get_client_attributes(self, device_id):
-        return self.get_attributes(device_id, 'CLIENT_SCOPE')
+    ''' Pass in a device or a device_id '''
+    def get_client_attributes(self, device):
+        return self.get_attributes(device, 'CLIENT_SCOPE')
 
 
-    def get_attributes(self, device_id, scope):
-        return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/values/attributes/" + scope, "Error retrieving " + scope + " attributes for '" + device_id + "'")
+    ''' Pass in a device or a device_id '''
+    def get_attributes(self, device, scope):
+        if not isinstance(device, str):
+            device = self.get_id(device)
+
+        return self.get("/api/plugins/telemetry/DEVICE/" + device + "/values/attributes/" + scope, "Error retrieving " + scope + " attributes for '" + device + "'")
 
 
-    def set_server_attributes(self, device_id, attributes):
-        return self.set_attributes(device_id, attributes, 'SERVER_SCOPE')
+    ''' Pass in a device or a device_id '''
+    def set_server_attributes(self, device, attributes):
+        return self.set_attributes(device, attributes, 'SERVER_SCOPE')
 
 
-    def set_shared_attributes(self, device_id, attributes):
-        return self.set_attributes(device_id, attributes, 'SHARED_SCOPE')
+    ''' Pass in a device or a device_id '''
+    def set_shared_attributes(self, device, attributes):
+        return self.set_attributes(device, attributes, 'SHARED_SCOPE')
 
 
-    def set_client_attributes(self, device_id, attributes):
-        return self.set_attributes(device_id, attributes, 'CLIENT_SCOPE')
+    ''' Pass in a device or a device_id '''
+    def set_client_attributes(self, device, attributes):
+        return self.set_attributes(device, attributes, 'CLIENT_SCOPE')
 
 
-    def set_attributes(self, device_id, attributes, scope):
-        return self.post('/api/plugins/telemetry/DEVICE/' + device_id + '/' + scope, attributes, "Error setting " + scope + " attributes for device '" + device_id + "'")
+    def set_attributes(self, device, attributes, scope):
+        if not isinstance(device, str):
+            device = self.get_id(device)
+
+        return self.post('/api/plugins/telemetry/DEVICE/' + device + '/' + scope, attributes, "Error setting " + scope + " attributes for device '" + device + "'")
 
 
 
