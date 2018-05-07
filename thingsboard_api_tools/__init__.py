@@ -65,8 +65,8 @@ class TbApi:
         return self.get('/api/customer/' + cust_id, "Could not retrieve customer with id '" + cust_id + "'")
 
 
-    ''' Updates an existing customer record '''
-    def update_customer(self, cust=None, name=None, address=None, address2=None, city=None, state=None, zip=None, country=None, email=None, phone=None):
+    ''' Updates an existing customer record --> pass in customer object, or a customer id'''
+    def update_customer(self, cust, name=None, address=None, address2=None, city=None, state=None, zip=None, country=None, email=None, phone=None):
         # Check if user passed a customer_id; if so, retrieve the customer object
         if isinstance(cust, str):
             cust = self.get_customer_by_id(cust)
@@ -91,6 +91,7 @@ class TbApi:
             cust["phone"] = phone
 
         return self.post('/api/customer', cust, "Error updating customer")
+
 
     ''' Adds customer and returns JSON customer from database '''
     def add_customer(self, name, address, address2, city, state, zip, country, email, phone):
