@@ -69,7 +69,7 @@ class TbApi:
     def update_customer(self, cust=None, name=None, address=None, address2=None, city=None, state=None, zip=None, country=None, email=None, phone=None):
         # Check if user passed a customer_id; if so, retrieve the customer object
         if isinstance(cust, str):
-            cust = get_customer_by_id(cust)
+            cust = self.get_customer_by_id(cust)
 
         if name is not None:
             cust["title"] = name
