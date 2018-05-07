@@ -52,6 +52,14 @@ class TbApi:
         return None
 
 
+    ''' Returns all devices associated with a customer; pass in customer object or id '''
+    def get_customer_devices(self, cust):
+        if not isinstance(cust, str):
+            cust = self.get_id(cust)
+
+        return self.get('/api/customer/' + cust_id + '/devices', "Error retrieving devices for customer '" + cust_id + "'")
+
+
     ''' Returns UUID of public customer, or None if there is none '''
     def get_public_user_uuid(self):
         return self.get_user_uuid('public')
