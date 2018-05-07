@@ -44,7 +44,7 @@ class TbApi:
 
     ''' Get customer with specified name '''
     def get_customer(self, name):
-        customers = self.get('/api/customers?limit=99999&textSearch=' + name, "Can't retrieve customer '" + name + "'")
+        customers = self.get('/api/customers?limit=99999&textSearch=' + name, "Can't find customer with name'" + name + "'")
         for customer in customers['data']:
             if(customer['title'] == name):
                 return customer
@@ -61,6 +61,36 @@ class TbApi:
     def get_user_uuid(self, name):
         return self.get_id(self.get_customer(name))
 
+    def get_customer_by_id(self, cust_id):
+        return self.get('/api/customer/' + cust_id, "Could not retrieve customer with id '" + cust_id + "'")
+
+
+    ''' Updates an existing customer record '''
+    def update_customer(self, cust, name, address, address2, city, state, zip, country, email, phone):
+        # Check if user passed a customer_id; if so, retrieve the customer object
+        if isinstance(cust, str):
+            cust = get_customer_by_id(cust)
+
+        if name is not None:
+            cust("title") = name
+        if address is not None:
+            cust("address") = address
+        if address2 is not None:
+            cust("address2") = address2
+        if city is not None:
+            cust("city") = city
+        if state is not None:
+            cust("state") = state
+        if zip is not None:
+            cust("zip") = zip
+        if country is not None:
+            cust("country") = country
+        if email is not None:
+            cust("email") = email
+        if phone is not None:
+            cust("phone") = phone
+
+        return self.post('/api/customer', data, "Error updating customer")
 
     ''' Adds customer and returns JSON customer from database '''
     def add_customer(self, name, address, address2, city, state, zip, country, email, phone):
