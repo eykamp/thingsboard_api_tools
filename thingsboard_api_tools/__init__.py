@@ -52,7 +52,7 @@ class TbApi:
         return None
 
 
-    ''' Returns all devices associated with a customer; pass in customer object or id '''
+    ''' Returns a list of all devices associated with a customer; pass in customer object or id '''
     def get_customer_devices(self, cust):
         if not isinstance(cust, str):
             cust = self.get_id(cust)
