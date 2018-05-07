@@ -72,23 +72,23 @@ class TbApi:
             cust = get_customer_by_id(cust)
 
         if name is not None:
-            cust("title") = name
+            cust["title"] = name
         if address is not None:
-            cust("address") = address
+            cust["address"] = address
         if address2 is not None:
-            cust("address2") = address2
+            cust["address2"] = address2
         if city is not None:
-            cust("city") = city
+            cust["city"] = city
         if state is not None:
-            cust("state") = state
+            cust["state"] = state
         if zip is not None:
-            cust("zip") = zip
+            cust["zip")]= zip
         if country is not None:
-            cust("country") = country
+            cust["country"] = country
         if email is not None:
-            cust("email") = email
+            cust["email"] = email
         if phone is not None:
-            cust("phone") = phone
+            cust["phone"] = phone
 
         return self.post('/api/customer', data, "Error updating customer")
 
