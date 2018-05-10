@@ -265,7 +265,7 @@ class TbApi:
 
 
     # Note that this requires the device's secret token, not the device_id!
-    def send_telemetry(self, device_token, data, timestamp):
+    def send_telemetry(self, device_token, data, timestamp=None):
         if timestamp is not None:
             data = {"ts": timestamp ,"values": data }
         return self.post("/api/v1/" + device_token + "/telemetry", data, "Error sending telemetry for device with token '" + device_token + "'")
