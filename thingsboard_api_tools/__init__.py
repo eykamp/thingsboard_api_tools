@@ -213,8 +213,12 @@ class TbApi:
         return device
 
 
-    def get_device_token(self, device_id):
-        json = self.get("/api/device/" + device_id + "/credentials", "Error retreiving device_key for device '" + device_id + "'")
+    ''' Pass in a device or a device_id '''
+    def get_device_token(self, device):
+        if not isinstance(device, str):
+            device = self.get_id(device)
+            
+        json = self.get("/api/device/" + device + "/credentials", "Error retreiving device_key for device '" + device + "'")
         return json["credentialsId"]
 
 
