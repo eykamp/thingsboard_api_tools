@@ -118,7 +118,7 @@ class TbApi:
         return self.post('/api/customer', data, "Error adding customer '" + name + "'")
 
 
-    ''' Returns true if successful, False if the customer wasn't found '''
+    ''' Returns True if successful, False if the customer wasn't found '''
     def delete_customer_by_id(self, id):
         return self.delete("/api/customer/" + id, "Error deleting customer '" + id + "'")
 
@@ -279,7 +279,7 @@ class TbApi:
         return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/keys/timeseries", "Error retrieving telemetry keys for device '" + device_id + "'")
 
 
-    # Pass a single key, a stringified comma-separate list, a list object, or a touple
+    # Pass a single key, a stringified comma-separate list, a list object, or a tuple
     def get_latest_telemetry(self, device_id, telemetry_keys):
         if isinstance(telemetry_keys, str):
             keys = telemetry_keys
@@ -288,7 +288,7 @@ class TbApi:
 
         return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/values/timeseries?keys=" + keys, "Error retrieving latest telemetry for device '" + device_id + "' with keys '" + keys + "'")
 
-    # Pass a single key, a stringified comma-separate list, a list object, or a touple
+    # Pass a single key, a stringified comma-separate list, a list object, or a tuple
     def get_telemetry(self, device_id, telemetry_keys, startTime=None, endTime=None, interval=None, limit=None, agg=None):
 
         if isinstance(telemetry_keys, str):
