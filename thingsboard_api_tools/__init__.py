@@ -72,10 +72,9 @@ class TbApi:
 
     ''' Returns a list of all devices associated with a customer; pass in customer object or id '''
     def get_customer_devices(self, cust):
-        if not isinstance(cust, str):
-            cust = self.get_id(cust)
+        cust_id = self.get_id(cust)
 
-        return self.get('/api/customer/' + cust + '/devices?limit=99999', "Error retrieving devices for customer '" + cust + "'")["data"]
+        return self.get('/api/customer/' + cust_id + '/devices?limit=99999', "Error retrieving devices for customer '" + cust_id + "'")["data"]
 
 
     ''' Returns UUID of public customer, or None if there is none '''
@@ -233,10 +232,9 @@ class TbApi:
 
     ''' Pass in a device or a device_id '''
     def get_device_token(self, device):
-        if not isinstance(device, str):
-            device = self.get_id(device)
+        device_id = self.get_id(device)
             
-        json = self.get("/api/device/" + device + "/credentials", "Error retreiving device_key for device '" + device + "'")
+        json = self.get("/api/device/" + device_id + "/credentials", "Error retreiving device_key for device '" + device_id + "'")
         return json["credentialsId"]
 
 
@@ -257,10 +255,9 @@ class TbApi:
 
     ''' Pass in a device or a device_id '''
     def get_attributes(self, device, scope):
-        if not isinstance(device, str):
-            device = self.get_id(device)
-
-        return self.get("/api/plugins/telemetry/DEVICE/" + device + "/values/attributes/" + scope, "Error retrieving " + scope + " attributes for '" + device + "'")
+        device_id = self.get_id(device)
+        
+        return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/values/attributes/" + scope, "Error retrieving " + scope + " attributes for '" + device_id + "'")
 
 
     ''' Pass in a device or a device_id '''
@@ -279,10 +276,9 @@ class TbApi:
 
 
     def set_attributes(self, device, attributes, scope):
-        if not isinstance(device, str):
-            device = self.get_id(device)
+        device_id = self.get_id(device)
 
-        return self.post('/api/plugins/telemetry/DEVICE/' + device + '/' + scope, attributes, "Error setting " + scope + " attributes for device '" + device + "'")
+        return self.post('/api/plugins/telemetry/DEVICE/' + device_id + '/' + scope, attributes, "Error setting " + scope + " attributes for device '" + device + "'")
 
 
 
@@ -293,12 +289,16 @@ class TbApi:
         return self.post("/api/v1/" + device_token + "/telemetry", data, "Error sending telemetry for device with token '" + device_token + "'")
 
 
-    def get_telemetry_keys(self, device_id):
+    def get_telemetry_keys(self, device):
+        device_id = self.get_id(device)
+
         return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/keys/timeseries", "Error retrieving telemetry keys for device '" + device_id + "'")
 
 
     # Pass a single key, a stringified comma-separate list, a list object, or a tuple
-    def get_latest_telemetry(self, device_id, telemetry_keys):
+    def get_latest_telemetry(self, device, telemetry_keys):
+        device_id = self.get_id(device)
+
         if isinstance(telemetry_keys, str):
             keys = telemetry_keys
         else:
@@ -307,7 +307,8 @@ class TbApi:
         return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/values/timeseries?keys=" + keys, "Error retrieving latest telemetry for device '" + device_id + "' with keys '" + keys + "'")
 
     # Pass a single key, a stringified comma-separate list, a list object, or a tuple
-    def get_telemetry(self, device_id, telemetry_keys, startTime=None, endTime=None, interval=None, limit=None, agg=None):
+    def get_telemetry(self, device, telemetry_keys, startTime=None, endTime=None, interval=None, limit=None, agg=None):
+        device_id = self.get_id(device)
 
         if isinstance(telemetry_keys, str):
             keys = telemetry_keys
@@ -332,7 +333,9 @@ class TbApi:
         return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/values/timeseries?keys=" + keys + "&startTs=" + str(int(startTime)) + "&endTs=" + str(int(endTime)) + "&interval=" + str(interval) + "&limit=" + str(limit) + "&agg=" + agg, "Error retrieving telemetry for device '" + device_id + "' with date range '" + str(int(startTime)) + "-" + str(int(endTime)) + "' and keys '" + keys + "'")
 
 
-    def delete_telemetry(self, device_id, key, timestamp):
+    def delete_telemetry(self, device, key, timestamp):
+        device_id = self.get_id(device)
+
         return self.delete("/api/plugins/telemetry/DEVICE/" + device_id + "/timeseries/values?key=" + key + "&ts=" + str(int(timestamp)), "Error deleting telemetry for device '" + device_id + "'")
 
 
@@ -341,6 +344,10 @@ class TbApi:
     def get_id(obj):
         if obj is None:
             return None
+
+        # If we were passed a string, assume it's already an id
+        if isinstance(obj, str):
+            return obj
 
         return obj['id']['id']
 
