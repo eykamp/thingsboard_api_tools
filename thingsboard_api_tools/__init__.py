@@ -152,12 +152,15 @@ class TbApi:
 
 
     ''' Returns dashboard definition '''
-    def assign_dash_to_user(self, dashboard_id, customer_id):
+    def assign_dash_to_user(self, dash, customer):
+        dashboard_id = self.get_id(dash)
+        customer_id = self.get_id(customer)
         return self.post('/api/customer/' + customer_id + '/dashboard/' + dashboard_id, None, "Could not assign dashboard '" + dashboard_id + "' to customer '" + customer_id + "'")
 
 
     ''' Returns True if dashboard was deleted, False if it did not exist '''
-    def delete_dashboard(self, dashboard_id):
+    def delete_dashboard(self, dash):
+        dashboard_id = self.get_id(dash)
         return self.delete('/api/dashboard/' + dashboard_id, "Error deleting dashboard '" + dashboard_id +"'")
 
 
