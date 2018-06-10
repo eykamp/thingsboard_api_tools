@@ -174,8 +174,12 @@ class TbApi:
         }
 
         # Update the configuration
-
         return self.post('/api/dashboard', data, "Error creating new dashboard")
+
+
+    ''' Saves a fully formed dashboard definition '''
+    def save_dashboard(self, dash_def):
+        return self.post('/api/dashboard', dash_def, "Error saving dashboard")
 
 
     ''' Returns dashboard with specified name, or None if we can't find one '''
