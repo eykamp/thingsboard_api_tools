@@ -182,9 +182,14 @@ class TbApi:
         return self.post('/api/dashboard', dash_def, "Error saving dashboard")
 
 
+    ''' Returns a list of all dashes starting with the specified name '''
+    def get_dashboards_by_name(self, dash_name_prefix):
+        return self.get('/api/tenant/dashboards?limit=99999&textSearch=' + dash_name_prefix, "Error retrieving dashboards starting with '" + dash_name_prefix + "'")['data']
+
+
     ''' Returns dashboard with specified name, or None if we can't find one '''
     def get_dashboard_by_name(self, dash_name):
-        dashes = self.get('/api/tenant/dashboards?limit=99999&textSearch=' + dash_name, "Error retrieving dashboard '" + dash_name + "'")['data']
+        dashes = self.get_dashboards_by_name(dash_name)
         for dash in dashes:
             if dash['title'] == dash_name:
                 return dash
