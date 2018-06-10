@@ -258,7 +258,7 @@ class TbApi:
     ''' Pass in a device or a device_id '''
     def get_attributes(self, device, scope):
         device_id = self.get_id(device)
-        
+
         return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/values/attributes/" + scope, "Error retrieving " + scope + " attributes for '" + device_id + "'")
 
 
@@ -332,7 +332,10 @@ class TbApi:
         if agg is None:
             agg = "NONE"   # MIN, MAX, AVG, SUM, COUNT, NONE
 
-        return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/values/timeseries?keys=" + keys + "&startTs=" + str(int(startTime)) + "&endTs=" + str(int(endTime)) + "&interval=" + str(interval) + "&limit=" + str(limit) + "&agg=" + agg, "Error retrieving telemetry for device '" + device_id + "' with date range '" + str(int(startTime)) + "-" + str(int(endTime)) + "' and keys '" + keys + "'")
+        params = "/api/plugins/telemetry/DEVICE/" + device_id + "/values/timeseries?keys=" + keys + "&startTs=" + str(int(startTime)) + "&endTs=" + str(int(endTime)) + "&interval=" + str(interval) + "&limit=" + str(limit) + "&agg=" + agg
+        error_message = "Error retrieving telemetry for device '" + device_id + "' with date range '" + str(int(startTime)) + "-" + str(int(endTime)) + "' and keys '" + keys + "'"
+
+        return self.get(params, error_message)
 
 
     def delete_telemetry(self, device, key, timestamp):
