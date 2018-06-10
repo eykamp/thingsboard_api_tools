@@ -322,7 +322,7 @@ class TbApi:
             endTime = int(time.time() * 1000)       # Unix timestamp, now, convert to milliseconds
 
         if interval is None:
-            interval = 60000   # in ms
+            interval = 60 * 1000   # 1 minute, in ms
 
         if limit is None:            
             limit = 100
