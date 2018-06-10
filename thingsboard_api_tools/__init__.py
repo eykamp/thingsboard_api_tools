@@ -185,12 +185,14 @@ class TbApi:
 
 
     ''' Retrieve dashboard by id '''
-    def get_dashboard_by_id(self, dash_id):
-        return self.get('/api/dashboard/info/' + dash_id, "Error retrieving dashboard '" + dash_id + "'")
+    def get_dashboard_by_id(self, dash):
+        dash_id = self.get_id(dash)
+        return self.get('/api/dashboard/info/' + dash_id, "Error retrieving dashboard for '" + dash_id + "'")
 
 
-    def get_dashboard_definition(self, dash_id):
-        return self.get('/api/dashboard/' + dash_id, "Error retrieving dashboard definition '" + dash_id + "'")
+    def get_dashboard_definition(self, dash):
+        dash_id = self.get_id(dash)
+        return self.get('/api/dashboard/' + dash_id, "Error retrieving dashboard definition for '" + dash_id + "'")
 
 
     ''' Returns named device object, or None if it can't be found '''
