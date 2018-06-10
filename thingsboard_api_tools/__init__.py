@@ -216,8 +216,8 @@ class TbApi:
 
 
     ''' Returns a list of all devices starting with the specified name '''
-    def get_devices_by_name(self, device_name):
-        return self.get('/api/tenant/devices?limit=99999&textSearch=' + device_name, "Error fetching devices with name matching '" + device_name + "'")['data']
+    def get_devices_by_name(self, device_name_prefix):
+        return self.get('/api/tenant/devices?limit=99999&textSearch=' + device_name_prefix, "Error fetching devices with name matching '" + device_name_prefix + "'")['data']
 
 
     ''' Returns device object '''
