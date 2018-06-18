@@ -71,6 +71,11 @@ class TbApi:
         return None
 
 
+    ''' Returns a list of all devices for current tenant `'''
+    def get_tenant_devices(self):
+        return self.get('/api/tenant/devices?limit=99999', "Error retrieving devices for tenant")["data"]
+        
+
     ''' Returns a list of all devices associated with a customer; pass in customer object or id '''
     def get_customer_devices(self, cust):
         cust_id = self.get_id(cust)
