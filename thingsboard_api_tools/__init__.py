@@ -143,7 +143,7 @@ class TbApi:
         }
 
         if additional_info is not None:
-            cust["additionalInfo"] = additional_info
+            data["additionalInfo"] = additional_info
 
         return self.post('/api/customer', data, "Error adding customer '" + name + "'")
 
