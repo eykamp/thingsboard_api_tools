@@ -233,11 +233,17 @@ class TbApi:
         dash_id = self.get_id(dash)
         return self.get('/api/dashboard/' + dash_id, "Error retrieving dashboard definition for '" + dash_id + "'")
 
-
     ''' Returns named device object, or None if it can't be found '''
     def get_device_by_id(self, device_id):
-        return self.get('/api/device/' + device_id, "Could not retrieve device with id '" + device_id + "'")
-
+        if device_id is None:
+            return None
+        try:
+            return self.get('/api/device/' + device_id, "Could not retrieve device with id '" + device_id + "'")
+        except requests.exceptions.HTTPError as ex:
+            if ex.response.status_code == 404:
+                return None
+            else:
+                raise ex
 
     ''' Returns named device object, or None if it can't be found '''
     def get_device_by_name(self, device_name):
