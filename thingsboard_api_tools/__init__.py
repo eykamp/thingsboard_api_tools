@@ -238,6 +238,11 @@ class TbApi:
 
 
     ''' Returns named device object, or None if it can't be found '''
+    def get_device_by_id(self, device_id):
+        return self.get('/api/device/' + device_id, "Could not retrieve device with id '" + device_id + "'")
+
+
+    ''' Returns named device object, or None if it can't be found '''
     def get_device_by_name(self, device_name):
         devices = self.get_devices_by_name(device_name)
 
