@@ -401,6 +401,11 @@ class TbApi:
         return obj['id']['id']
 
 
+    @staticmethod
+    def get_customer_from_device(device):
+        return device['customerId']['id']
+
+
     def assign_device_to_public_user(self, device_id):
         return self.post('/api/customer/public/device/' + device_id, None, "Error assigning device '" + device_id + "' to public customer")
 
