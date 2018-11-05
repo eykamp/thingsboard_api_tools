@@ -95,9 +95,6 @@ class TbApi:
     def get_customer_by_id(self, cust_id):
         return self.get('/api/customer/' + cust_id, "Could not retrieve customer with id '" + cust_id + "'")
 
-    # def get_customer_by_name(self, cust_name):
-    #     return self.get('/api/customers?limit=99999&textSearch=' + cust_name, "Error looking up customer '" + cust_name + "'")
-
     def get_customers_by_name(self, cust_name_prefix):
         ''' Returns a list of all customers starting with the specified name '''
         return self.get('/api/customers?limit=99999&textSearch=' + cust_name_prefix, "Error retrieving customers with names starting with '" + cust_name_prefix + "'")['data']
