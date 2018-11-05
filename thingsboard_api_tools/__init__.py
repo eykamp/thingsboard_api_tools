@@ -95,6 +95,23 @@ class TbApi:
     def get_customer_by_id(self, cust_id):
         return self.get('/api/customer/' + cust_id, "Could not retrieve customer with id '" + cust_id + "'")
 
+    # def get_customer_by_name(self, cust_name):
+    #     return self.get('/api/customers?limit=99999&textSearch=' + cust_name, "Error looking up customer '" + cust_name + "'")
+
+    def get_customers_by_name(self, cust_name_prefix):
+        ''' Returns a list of all customers starting with the specified name '''
+        return self.get('/api/customers?limit=99999&textSearch=' + cust_name_prefix, "Error retrieving customers with names starting with '" + cust_name_prefix + "'")['data']
+
+
+    def get_customer_by_name(self, cust_name):
+        ''' Returns a customer with the specified name, or None if we can't find one '''
+        custs = self.get_customers_by_name(cust_name)
+        for cust in custs:
+            if cust['title'] == cust_name:
+                return cust
+
+        return None
+
 
     def update_customer(self, cust, name=None, address=None, address2=None, city=None, state=None, zip=None, country=None, email=None, phone=None, additional_info=None):
         ''' Updates an existing customer record --> pass in customer object, or a customer id
