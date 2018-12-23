@@ -405,7 +405,7 @@ class TbApi:
     @staticmethod
     def get_id(obj):
         if obj is None:
-            return None
+            raise ValueError(f"Could not resolve id for '{device}'")
 
         # If we were passed a string, assume it's already an id
         if isinstance(obj, str):
