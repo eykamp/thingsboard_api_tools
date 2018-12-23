@@ -334,8 +334,10 @@ class TbApi:
 
 
 
-    # Note that this requires the device's secret token, not the device_id!
     def send_telemetry(self, device_token, data, timestamp=None):
+        """
+        Note that this requires the device's secret token, not the device_id!
+        """
         if timestamp is not None:
             data = {"ts": timestamp ,"values": data }
         return self.post("/api/v1/" + device_token + "/telemetry", data, "Error sending telemetry for device with token '" + device_token + "'")
@@ -347,8 +349,10 @@ class TbApi:
         return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/keys/timeseries", "Error retrieving telemetry keys for device '" + device_id + "'")
 
 
-    # Pass a single key, a stringified comma-separate list, a list object, or a tuple
     def get_latest_telemetry(self, device, telemetry_keys):
+        """
+        Pass a single key, a stringified comma-separate list, a list object, or a tuple
+        """
         device_id = self.get_id(device)
 
         if isinstance(telemetry_keys, str):
@@ -358,8 +362,11 @@ class TbApi:
 
         return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/values/timeseries?keys=" + keys, "Error retrieving latest telemetry for device '" + device_id + "' with keys '" + keys + "'")
 
-    # Pass a single key, a stringified comma-separate list, a list object, or a tuple
+
     def get_telemetry(self, device, telemetry_keys, startTime=None, endTime=None, interval=None, limit=None, agg=None):
+        """
+        Pass a single key, a stringified comma-separate list, a list object, or a tuple
+        """
         device_id = self.get_id(device)
 
         if isinstance(telemetry_keys, str):
@@ -418,10 +425,10 @@ class TbApi:
 
     ''' Returns True if device was deleted, False if it did not exist '''
     def delete_device(self, device_id):
-        return self.delete('/api/device/' + device_id, "Error deleting device '" +  device_id +"'")
+        return self.delete('/api/device/' + device_id, "Error deleting device '" +  device_id + "'")
 
 
-    @staticmethod    
+    @staticmethod
     def pretty_print_request(req):
         print('{}\n{}\n{}\n\n{}'.format('-----------START-----------', req.method + ' ' + req.url, '\n'.join('{}: {}'.format(k, v) for k, v in req.headers.items()), req.body, ))
 
