@@ -262,6 +262,10 @@ class TbApi:
         return self.get('/api/tenant/devices?limit=99999&textSearch=' + device_name_prefix, "Error fetching devices with name matching '" + device_name_prefix + "'")['data']
 
 
+    def get_all_devices(self):
+        return self.get("/api/tenant/devices?limit=99999", "Error fetching list of all devices")['data']
+
+
     ''' Returns device object '''
     def add_device(self, device_name, device_type, shared_attributes, server_attributes):
 
