@@ -505,9 +505,6 @@ class TbApi:
     def validate_response(response, msg):
         try:
             response.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            print(msg + "! " + str(e))
-            print("----- BEGIN RESPONSE BODY -----")
-            print(response.content)
-            print("----- END RESPONSE BODY -----")
+        except requests.exceptions.RequestException as ex:
+            ex.args += (f"RESPONSE BODY: {response.content.decode('utf8')}",)        # Append our response to the exception to make it easier to figure out WTF went wrong
             raise
