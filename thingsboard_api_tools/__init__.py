@@ -187,7 +187,7 @@ class TbApi:
     ''' Returns True if dashboard was deleted, False if it did not exist '''
     def delete_dashboard(self, dash):
         dashboard_id = self.get_id(dash)
-        return self.delete('/api/dashboard/' + dashboard_id, "Error deleting dashboard '" + dashboard_id +"'")
+        return self.delete('/api/dashboard/' + dashboard_id, "Error deleting dashboard '" + dashboard_id + "'")
 
 
     ''' Returns dashboard definition '''
