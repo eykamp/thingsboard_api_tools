@@ -85,7 +85,7 @@ class TbApi:
 
     ''' Returns UUID of public customer, or None if there is none '''
     def get_public_user_uuid(self):
-        return self.get_user_uuid('public')
+        return self.get_user_uuid('Public')
 
 
     ''' Returns UUID of named customer, or None if user not found '''
