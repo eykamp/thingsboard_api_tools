@@ -405,17 +405,39 @@ class TbApi:
         return self.delete("/api/plugins/telemetry/DEVICE/" + device_id + "/timeseries/values?key=" + key + "&ts=" + str(int(timestamp)), "Error deleting telemetry for device '" + device_id + "'")
 
 
-    ''' Works with Customers, Devices, Dashes '''
+    def is_public_dashboard(self, dashboard):
+        pub_id = self.get_public_user_uuid()
+
+        if dashboard["assignedCustomers"] is None:
+            return False
+
+        for c in dashboard["assignedCustomers"]:
+            if self.get_id(c) == pub_id:
+                return True
+
+        return False
+
+
     @staticmethod
     def get_id(obj):
+        """
+        Works with Customers, Devices, Dashes
+        """
         if obj is None:
-            raise ValueError(f"Could not resolve id for '{obj}'")
+            raise ValueError(f"Could not resolve id for 'None'")
 
         # If we were passed a string, assume it's already an id
         if isinstance(obj, str):
             return obj
 
-        return obj['id']['id']
+        if "id" in obj and "id" in obj["id"]:
+            return obj["id"]["id"]
+
+        # If dashboard is public, it will have a list of associated customers that follow this slightly different pattern
+        if "customerId" in obj and "id" in obj["customerId"]:
+            return obj["customerId"]["id"]
+
+        raise ValueError(f"Could not resolve id for '{obj}'")
 
 
     @staticmethod
