@@ -480,6 +480,15 @@ class TbApi:
 
         return False
 
+
+    def is_public_device(self, device):
+        """
+        Return True if device is owned by the public users, False otherwise
+        """
+        pub_id = self.get_public_user_uuid()
+        return self.get_id(device["customerId"]) == pub_id
+
+
     @staticmethod
     def get_id(obj):
         """
