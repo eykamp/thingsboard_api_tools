@@ -495,6 +495,7 @@ class TbApi:
         if "id" in obj and "id" in obj["id"]:
             return obj["id"]["id"]
 
+        # This form is used when getting the id of a customer attached to a device... i.e. get_id(device["customerId"])
         if "id" in obj and isinstance(obj["id"], str):
             return obj["id"]
 
