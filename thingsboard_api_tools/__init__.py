@@ -504,7 +504,7 @@ class TbApi:
             return obj["customerId"]["id"]
 
         raise ValueError(f"Could not resolve id for {obj}")
-        
+
 
     @staticmethod
     def get_customer_from_device(device):
