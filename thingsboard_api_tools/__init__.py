@@ -495,6 +495,9 @@ class TbApi:
         if "id" in obj and "id" in obj["id"]:
             return obj["id"]["id"]
 
+        if "id" in obj and isinstance(obj["id"], str):
+            return obj["id"]
+
         # If dashboard is public, it will have a list of associated customers that follow this slightly different pattern
         if "customerId" in obj and "id" in obj["customerId"]:
             return obj["customerId"]["id"]
