@@ -469,6 +469,9 @@ class TbApi:
 
 
     def is_public_dashboard(self, dashboard):
+        """
+        Return True if dashboard is owned by the public users, False otherwise
+        """
         pub_id = self.get_public_user_uuid()
 
         if dashboard["assignedCustomers"] is None:
