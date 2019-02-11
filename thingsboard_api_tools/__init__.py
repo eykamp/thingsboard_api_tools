@@ -500,7 +500,7 @@ class TbApi:
         if "customerId" in obj and "id" in obj["customerId"]:
             return obj["customerId"]["id"]
 
-        raise ValueError(f"Could not resolve id for '{obj}'")
+        raise ValueError(f"Could not resolve id for {obj}")
 
 
     @staticmethod
