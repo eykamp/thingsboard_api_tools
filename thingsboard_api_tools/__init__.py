@@ -521,9 +521,13 @@ class TbApi:
         return device['customerId']['id']
 
 
-    def assign_device_to_public_user(self, device_id):
-        return self.post('/api/customer/public/device/' + device_id, None, "Error assigning device '" + device_id + "' to public customer")
+    def assign_device_to_public_user(self, device):
+        """
+        Pass in a device or a device_id
+        """
+        device_id = self.get_id(device)
 
+        return self.post('/api/customer/public/device/' + device_id, None, "Error assigning device '" + device_id + "' to public customer")
 
 
     def delete_device(self, device_id):
