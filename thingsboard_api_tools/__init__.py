@@ -94,7 +94,7 @@ class TbApi:
         return self.get('/api/customer/' + cust_id + '/devices?limit=99999', "Error retrieving devices for customer '" + cust_id + "'")["data"]
 
 
-    def get_public_user_uuid(self):
+    def get_public_user_id(self):
         """
         Returns UUID of public customer, or None if there is none
         """
@@ -488,7 +488,7 @@ class TbApi:
         """
         Return True if device is owned by the public users, False otherwise
         """
-        pub_id = self.get_public_user_uuid()
+        pub_id = self.get_public_user_id()
         return self.get_id(device["customerId"]) == pub_id
 
 
