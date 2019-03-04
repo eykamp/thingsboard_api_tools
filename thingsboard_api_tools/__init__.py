@@ -217,6 +217,17 @@ class TbApi:
         return self.post('/api/customer/public/dashboard/' + dash_id, None, "Error assigning dash '" + dash_id + "' to public customer")
 
 
+    def get_public_dash_url(self, dash):
+
+        if not self.is_public_dashboard(dash):
+            return None
+
+        dashboard_id = self.get_id(dash)
+        public_id = self.get_public_user_id()
+
+        return f"{self.mothership_url}/dashboard/{dashboard_id}?publicId={public_id}"
+
+
     def delete_dashboard(self, dash):
         """
         Returns True if dashboard was deleted, False if it did not exist
