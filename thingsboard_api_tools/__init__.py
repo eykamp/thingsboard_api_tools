@@ -470,7 +470,7 @@ class TbApi:
 
     def is_public_dashboard(self, dashboard):
         """
-        Return True if dashboard is owned by the public users, False otherwise
+        Return True if dashboard is owned by the public user False otherwise
         """
         pub_id = self.get_public_user_uuid()
 
@@ -486,7 +486,7 @@ class TbApi:
 
     def is_public_device(self, device):
         """
-        Return True if device is owned by the public users, False otherwise
+        Return True if device is owned by the public user, False otherwise
         """
         pub_id = self.get_public_user_id()
         return self.get_id(device["customerId"]) == pub_id
