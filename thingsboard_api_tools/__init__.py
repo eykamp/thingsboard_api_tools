@@ -209,6 +209,14 @@ class TbApi:
         return self.post('/api/customer/' + customer_id + '/dashboard/' + dashboard_id, None, "Could not assign dashboard '" + dashboard_id + "' to customer '" + customer_id + "'")
 
 
+    def assign_dash_to_public_user(self, dash):
+        """
+        Pass in a dash or a dash_id
+        """
+        dash_id = self.get_id(dash)
+        return self.post('/api/customer/public/dashboard/' + dash_id, None, "Error assigning dash '" + dash_id + "' to public customer")
+
+
     def delete_dashboard(self, dash):
         """
         Returns True if dashboard was deleted, False if it did not exist
