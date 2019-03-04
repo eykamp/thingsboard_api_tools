@@ -480,6 +480,13 @@ class TbApi:
         """
         Return True if dashboard is owned by the public user False otherwise
         """
+
+        # Do we have a dashboard or just an id?
+        if isinstance(dashboard, str):
+            dashboard = self.get_dashboard_by_id(dashboard)
+            if dashboard is None:
+                return False
+
         if dashboard["assignedCustomers"] is None:
             return False
 
