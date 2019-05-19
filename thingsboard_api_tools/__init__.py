@@ -46,7 +46,7 @@ class TbApi:
             return self.token
 
         data = '{"username":"' + self.username + '", "password":"' + self.password + '"}'
-        headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+        headers = {"Accept": "application/json", "Content-Type": "application/json"}
         # json = post("/api/auth/login", None, data, "Error requesting token")
 
         url = self.mothership_url + "/api/auth/login"
@@ -131,7 +131,9 @@ class TbApi:
         return None
 
     def update_customer(self, cust, name=None, address=None, address2=None, city=None, state=None, zip=None, country=None, email=None, phone=None, additional_info=None):
-        """ Updates an existing customer record --> pass in customer object, or a customer id additional_info is a dict """
+        """
+        Updates an existing customer record --> pass in customer object, or a customer id additional_info is a dict
+        """
 
         # Check if user passed a customer_id; if so, retrieve the customer object
         if isinstance(cust, str):
@@ -162,7 +164,9 @@ class TbApi:
 
 
     def add_customer(self, name, address, address2, city, state, zip, country, email, phone, additional_info=None):
-        """ Adds customer and returns JSON customer from database """
+        """
+        Adds customer and returns JSON customer from database
+        """
         data = {
             "title": name,
             "address": address,
@@ -193,7 +197,7 @@ class TbApi:
         Returns True if successful, False if the customer wasn't found
         """
         id = self.get_user_uuid(name)
-        if id == None:
+        if id is None:
             print("Could not find customer with name " + name)
             return False
 
@@ -307,7 +311,7 @@ class TbApi:
 
     def get_device_by_name(self, device_name):
         """
-        Returns named device object, or None if it can't be found
+        Returns device object representing the first device found with the given name, or None if one can't be found
         """
         devices = self.get_devices_by_name(device_name)
 
@@ -366,21 +370,21 @@ class TbApi:
         """
         Pass in a device or a device_id
         """
-        return self.get_attributes(device, 'SERVER_SCOPE')
+        return self.get_attributes(device, "SERVER_SCOPE")
 
 
     def get_shared_attributes(self, device):
         """
         Pass in a device or a device_id
         """
-        return self.get_attributes(device, 'SHARED_SCOPE')
+        return self.get_attributes(device, "SHARED_SCOPE")
 
 
     def get_client_attributes(self, device):
         """
         Pass in a device or a device_id
         """
-        return self.get_attributes(device, 'CLIENT_SCOPE')
+        return self.get_attributes(device, "CLIENT_SCOPE")
 
 
     def get_attributes(self, device, scope):
@@ -395,22 +399,23 @@ class TbApi:
     def set_server_attributes(self, device, attributes):
         """
         Pass in a device or a device_id
+        attributes is a dict
         """
-        return self.set_attributes(device, attributes, 'SERVER_SCOPE')
+        return self.set_attributes(device, attributes, "SERVER_SCOPE")
 
 
     def set_shared_attributes(self, device, attributes):
         """
         Pass in a device or a device_id
         """
-        return self.set_attributes(device, attributes, 'SHARED_SCOPE')
+        return self.set_attributes(device, attributes, "SHARED_SCOPE")
 
 
     def set_client_attributes(self, device, attributes):
         """
         Pass in a device or a device_id
         """
-        return self.set_attributes(device, attributes, 'CLIENT_SCOPE')
+        return self.set_attributes(device, attributes, "CLIENT_SCOPE")
 
 
     def set_attributes(self, device, attributes, scope):
@@ -443,7 +448,7 @@ class TbApi:
         if isinstance(telemetry_keys, str):
             keys = telemetry_keys
         else:
-            keys = ','.join(telemetry_keys)
+            keys = ",".join(telemetry_keys)
 
         return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/values/timeseries?keys=" + keys, "Error retrieving latest telemetry for device '" + device_id + "' with keys '" + keys + "'")
 
@@ -544,7 +549,7 @@ class TbApi:
 
     @staticmethod
     def get_customer_from_device(device):
-        return device['customerId']['id']
+        return device["customerId"]["id"]
 
 
     def assign_device_to_public_user(self, device):
@@ -565,7 +570,7 @@ class TbApi:
 
     @staticmethod
     def pretty_print_request(req):
-        print('{}\n{}\n{}\n\n{}'.format('-----------START-----------', req.method + ' ' + req.url, '\n'.join('{}: {}'.format(k, v) for k, v in req.headers.items()), req.body, ))
+        print('{}\n{}\n{}\n\n{}'.format("-----------START-----------", req.method + ' ' + req.url, '\n'.join('{}: {}'.format(k, v) for k, v in req.headers.items()), req.body, ))
 
 
     def add_auth_header(self, headers):
@@ -574,12 +579,12 @@ class TbApi:
         """
         token = self.get_token()
         if token is not None:
-            headers['X-Authorization'] = 'Bearer ' + token
+            headers["X-Authorization"] = "Bearer " + token
 
 
     def get(self, params, msg):
         url = self.mothership_url + params
-        headers = {'Accept': 'application/json'}
+        headers = {"Accept": "application/json"}
         self.add_auth_header(headers)
 
         if self.verbose:
@@ -595,11 +600,11 @@ class TbApi:
 
     def delete(self, params, msg):
         url = self.mothership_url + params
-        headers = {'Accept': 'application/json'}
+        headers = {"Accept": "application/json"}
         self.add_auth_header(headers)
 
         if self.verbose:
-            req = requests.Request('DELETE', url, headers=headers)
+            req = requests.Request("DELETE", url, headers=headers)
             prepared = req.prepare()
             TbApi.pretty_print_request(prepared)
 
@@ -616,11 +621,11 @@ class TbApi:
 
     def post(self, params, data, msg):
         url = self.mothership_url + params
-        headers = {'Accept': 'application/json', 'Content-Type': 'application/json'}
+        headers = {"Accept": "application/json", "Content-Type": "application/json"}
         self.add_auth_header(headers)
 
         if self.verbose:
-            req = requests.Request('POST', url, json=data, headers=headers)
+            req = requests.Request("POST", url, json=data, headers=headers)
             prepared = req.prepare()
             TbApi.pretty_print_request(prepared)
 
