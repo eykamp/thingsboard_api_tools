@@ -620,6 +620,9 @@ class TbApi:
 
 
     def post(self, params, data, msg):
+        """
+        Data can be a string or a dict; if it's a dict, it will be flattened
+        """
         url = self.mothership_url + params
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         self.add_auth_header(headers)
