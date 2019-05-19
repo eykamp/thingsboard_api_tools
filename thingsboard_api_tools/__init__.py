@@ -628,6 +628,9 @@ class TbApi:
         self.add_auth_header(headers)
 
         if self.verbose:
+            if type(data) is dict:
+                data = json.dumps(data)
+
             req = requests.Request("POST", url, json=data, headers=headers)
             prepared = req.prepare()
             TbApi.pretty_print_request(prepared)
