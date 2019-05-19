@@ -424,6 +424,39 @@ class TbApi:
         return self.post(f"/api/plugins/telemetry/DEVICE/{device_id}/{scope}", attributes, f"Error setting {scope} attributes for device '{device}'")
 
 
+    def delete_server_attributes(self, device, attributes):
+        """
+        Pass in a device or a device_id
+        """
+        return self.delete_attributes(device, attributes, 'SERVER_SCOPE')
+
+
+    def delete_shared_attributes(self, device, attributes):
+        """
+        Pass in a device or a device_id
+        """
+        return self.delete_attributes(device, attributes, 'SHARED_SCOPE')
+
+
+    def delete_client_attributes(self, device, attributes):
+        """
+        Pass in a device or a device_id
+        """
+        return self.delete_attributes(device, attributes, 'CLIENT_SCOPE')
+
+
+    def delete_attributes(self, device, attributes, scope):
+        """
+        Pass an attribute name or a list of attributes
+        """
+        device_id = self.get_id(device)
+
+        if type(attributes) is list or type(attributes) is tuple:
+            attributes = ",".join(attributes)
+
+        return self.delete(f"/api/plugins/telemetry/DEVICE/{device_id}/{scope}?keys={attributes}", f"Error deleting {scope} attributes for device '{device}'")
+
+
     def send_telemetry(self, device_token, data, timestamp=None):
         """
         Note that this requires the device's secret token, not the device_id!
