@@ -421,7 +421,7 @@ class TbApi:
     def set_attributes(self, device, attributes, scope):
         device_id = self.get_id(device)
 
-        return self.post('/api/plugins/telemetry/DEVICE/' + device_id + '/' + scope, attributes, "Error setting " + scope + " attributes for device '" + device + "'")
+        return self.post(f"/api/plugins/telemetry/DEVICE/{device_id}/{scope}", attributes, f"Error setting {scope} attributes for device '{device}'")
 
 
     def send_telemetry(self, device_token, data, timestamp=None):
