@@ -486,7 +486,7 @@ class TbApi:
         return self.delete(f"/api/plugins/telemetry/DEVICE/{device_id}/{scope}?keys={attributes}", f"Error deleting {scope} attributes for device '{device}'")
 
 
-    def send_asset_telemetry(self, asset_id, scope='SERVER_SCOPE', timestamp=None,):
+    def send_asset_telemetry(self, asset_id, data, scope='SERVER_SCOPE', timestamp=None,):
         if timestamp is not None:
             data = {"ts": timestamp, "values": data}
         return self.post("/api/plugins/telemetry/ASSET/" + asset_id + "/timeseries/" + scope, data, "Error sending telemetry for asset with id '" + asset_id + "'")
