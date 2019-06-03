@@ -78,6 +78,13 @@ class TbApi:
         return None
 
 
+    def get_tenant_assets(self):
+        """
+        Returns a list of all devices for current tenant
+        """
+        return self.get('/api/tenant/assets?limit=99999', "Error retrieving assets for tenant")["data"]
+
+
     def get_tenant_devices(self):
         """
         Returns a list of all devices for current tenant
@@ -334,6 +341,24 @@ class TbApi:
         return self.get("/api/tenant/devices?limit=99999", "Error fetching list of all devices")['data']
 
 
+
+    def add_asset(self, asset_name, asset_type, shared_attributes, server_attributes):
+        data = { 
+            "name": asset_name,
+            "type": asset_type
+
+        }
+        asset = self.post('/api/asset', data, "Error adding asset")
+        asset_id = self.get_id(asset)
+
+        if server_attributes is not None:
+            self.set_server_attributes(asset_id, server_attributes)
+
+        if shared_attributes is not None:
+            self.set_shared_attributes(asset_id, shared_attributes)
+
+        return asset
+
     def add_device(self, device_name, device_type, shared_attributes, server_attributes):
         """
         Returns device object
@@ -354,6 +379,10 @@ class TbApi:
             self.set_shared_attributes(device_id, shared_attributes)
 
         return device
+
+
+    def get_asset_types(self):
+        return self.get("/api/asset/types", "Error fetching list of all asset types")
 
 
     def get_device_token(self, device):
@@ -457,7 +486,13 @@ class TbApi:
         return self.delete(f"/api/plugins/telemetry/DEVICE/{device_id}/{scope}?keys={attributes}", f"Error deleting {scope} attributes for device '{device}'")
 
 
-    def send_telemetry(self, device_token, data, timestamp=None):
+    def send_asset_telemetry(self, asset_id, scope='SERVER_SCOPE', timestamp=None,):
+        if timestamp is not None:
+            data = {"ts": timestamp, "values": data}
+        return self.post("/api/plugins/telemetry/ASSET/" + asset_id + "/timeseries/" + scope, data, "Error sending telemetry for asset with id '" + asset_id + "'")
+
+
+    def send_telemetry(self, device_token, data, timestamp=None, ):
         """
         Note that this requires the device's secret token, not the device_id!
         """
@@ -594,12 +629,18 @@ class TbApi:
         return self.post('/api/customer/public/device/' + device_id, None, "Error assigning device '" + device_id + "' to public customer")
 
 
+    def delete_asset(self, asset_id):
+        """
+        Returns True if asset was deleted, False if it did not exist
+        """
+        return self.delete('/api/asset/' + asset_id, "Error deleting device '" + asset_id + "'")
+
+
     def delete_device(self, device_id):
         """
         Returns True if device was deleted, False if it did not exist
         """
         return self.delete('/api/device/' + device_id, "Error deleting device '" + device_id + "'")
-
 
     @staticmethod
     def pretty_print_request(req):
