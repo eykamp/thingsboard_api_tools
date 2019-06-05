@@ -63,16 +63,16 @@ class TbApi:
         """
         Return a list of all customers in the system
         """
-        return self.get('/api/customers?limit=99999', "Error retrieving customers")["data"]
+        return self.get("/api/customers?limit=99999", "Error retrieving customers")["data"]
 
 
     def get_customer(self, name):
         """
         Get customer with specified name
         """
-        customers = self.get('/api/customers?limit=99999&textSearch=' + name, "Can't find customer with name '" + name + "'")
-        for customer in customers['data']:
-            if(customer['title'] == name):
+        customers = self.get("/api/customers?limit=99999&textSearch=" + name, "Can't find customer with name '" + name + "'")
+        for customer in customers["data"]:
+            if(customer["title"] == name):
                 return customer
 
         return None
@@ -82,14 +82,14 @@ class TbApi:
         """
         Returns a list of all assets for current tenant
         """
-        return self.get('/api/tenant/assets?limit=99999', "Error retrieving assets for tenant")["data"]
+        return self.get("/api/tenant/assets?limit=99999", "Error retrieving assets for tenant")["data"]
 
 
     def get_tenant_devices(self):
         """
         Returns a list of all devices for current tenant
         """
-        return self.get('/api/tenant/devices?limit=99999', "Error retrieving devices for tenant")["data"]
+        return self.get("/api/tenant/devices?limit=99999", "Error retrieving devices for tenant")["data"]
 
 
     def get_customer_devices(self, cust):
@@ -98,14 +98,14 @@ class TbApi:
         """
         cust_id = self.get_id(cust)
 
-        return self.get('/api/customer/' + cust_id + '/devices?limit=99999', "Error retrieving devices for customer '" + cust_id + "'")["data"]
+        return self.get("/api/customer/" + cust_id + "/devices?limit=99999", "Error retrieving devices for customer '" + cust_id + "'")["data"]
 
 
     def get_public_user_id(self):
         """
         Returns UUID of public customer, or None if there is none
         """
-        return self.get_user_uuid('Public')
+        return self.get_user_uuid("Public")
 
 
     def get_user_uuid(self, name):
@@ -116,14 +116,14 @@ class TbApi:
 
 
     def get_customer_by_id(self, cust_id):
-        return self.get('/api/customer/' + cust_id, "Could not retrieve customer with id '" + cust_id + "'")
+        return self.get("/api/customer/" + cust_id, "Could not retrieve customer with id '" + cust_id + "'")
 
 
     def get_customers_by_name(self, cust_name_prefix):
         """
         Returns a list of all customers starting with the specified name
         """
-        return self.get('/api/customers?limit=99999&textSearch=' + cust_name_prefix, "Error retrieving customers with names starting with '" + cust_name_prefix + "'")['data']
+        return self.get("/api/customers?limit=99999&textSearch=" + cust_name_prefix, "Error retrieving customers with names starting with '" + cust_name_prefix + "'")["data"]
 
 
     def get_customer_by_name(self, cust_name):
@@ -132,7 +132,7 @@ class TbApi:
         """
         custs = self.get_customers_by_name(cust_name)
         for cust in custs:
-            if cust['title'] == cust_name:
+            if cust["title"] == cust_name:
                 return cust
 
         return None
@@ -167,7 +167,7 @@ class TbApi:
         if additional_info is not None:
             cust["additionalInfo"] = additional_info
 
-        return self.post('/api/customer', cust, "Error updating customer")
+        return self.post("/api/customer", cust, "Error updating customer")
 
 
     def add_customer(self, name, address, address2, city, state, zip, country, email, phone, additional_info=None):
@@ -189,7 +189,7 @@ class TbApi:
         if additional_info is not None:
             data["additionalInfo"] = additional_info
 
-        return self.post('/api/customer', data, "Error adding customer '" + name + "'")
+        return self.post("/api/customer", data, "Error adding customer '" + name + "'")
 
 
     def delete_customer_by_id(self, id):
@@ -217,7 +217,7 @@ class TbApi:
         """
         dashboard_id = self.get_id(dash)
         customer_id = self.get_id(customer)
-        return self.post('/api/customer/' + customer_id + '/dashboard/' + dashboard_id, None, "Could not assign dashboard '" + dashboard_id + "' to customer '" + customer_id + "'")
+        return self.post("/api/customer/" + customer_id + "/dashboard/" + dashboard_id, None, "Could not assign dashboard '" + dashboard_id + "' to customer '" + customer_id + "'")
 
 
     def assign_dash_to_public_user(self, dash):
@@ -225,7 +225,7 @@ class TbApi:
         Pass in a dash or a dash_id
         """
         dash_id = self.get_id(dash)
-        return self.post('/api/customer/public/dashboard/' + dash_id, None, "Error assigning dash '" + dash_id + "' to public customer")
+        return self.post("/api/customer/public/dashboard/" + dash_id, None, "Error assigning dash '" + dash_id + "' to public customer")
 
 
     def get_public_dash_url(self, dash):
@@ -244,7 +244,7 @@ class TbApi:
         Returns True if dashboard was deleted, False if it did not exist
         """
         dashboard_id = self.get_id(dash)
-        return self.delete('/api/dashboard/' + dashboard_id, "Error deleting dashboard '" + dashboard_id + "'")
+        return self.delete("/api/dashboard/" + dashboard_id, "Error deleting dashboard '" + dashboard_id + "'")
 
 
     def create_dashboard_for_customer(self, dash_name, dash_def):
@@ -259,21 +259,21 @@ class TbApi:
         }
 
         # Update the configuration
-        return self.post('/api/dashboard', data, "Error creating new dashboard")
+        return self.post("/api/dashboard", data, "Error creating new dashboard")
 
 
     def save_dashboard(self, dash_def):
         """
         Saves a fully formed dashboard definition
         """
-        return self.post('/api/dashboard', dash_def, "Error saving dashboard")
+        return self.post("/api/dashboard", dash_def, "Error saving dashboard")
 
 
     def get_dashboards_by_name(self, dash_name_prefix):
         """
         Returns a list of all dashes starting with the specified name
         """
-        return self.get('/api/tenant/dashboards?limit=99999&textSearch=' + dash_name_prefix, "Error retrieving dashboards starting with '" + dash_name_prefix + "'")['data']
+        return self.get("/api/tenant/dashboards?limit=99999&textSearch=" + dash_name_prefix, "Error retrieving dashboards starting with '" + dash_name_prefix + "'")["data"]
 
 
     def get_dashboard_by_name(self, dash_name):
@@ -293,12 +293,12 @@ class TbApi:
         Retrieve dashboard by id
         """
         dash_id = self.get_id(dash)
-        return self.get('/api/dashboard/info/' + dash_id, "Error retrieving dashboard for '" + dash_id + "'")
+        return self.get("/api/dashboard/info/" + dash_id, "Error retrieving dashboard for '" + dash_id + "'")
 
 
     def get_dashboard_definition(self, dash):
         dash_id = self.get_id(dash)
-        return self.get('/api/dashboard/' + dash_id, "Error retrieving dashboard definition for '" + dash_id + "'")
+        return self.get("/api/dashboard/" + dash_id, "Error retrieving dashboard definition for '" + dash_id + "'")
 
 
     def get_device_by_id(self, device_id):
@@ -308,7 +308,7 @@ class TbApi:
         if device_id is None:
             return None
         try:
-            return self.get('/api/device/' + device_id, "Could not retrieve device with id '" + device_id + "'")
+            return self.get("/api/device/" + device_id, "Could not retrieve device with id '" + device_id + "'")
         except requests.exceptions.HTTPError as ex:
             if ex.response.status_code == 404:
                 return None
@@ -324,7 +324,7 @@ class TbApi:
 
         # Fine exact match
         for device in devices:
-            if device['name'] == device_name:
+            if device["name"] == device_name:
                 return device
 
         return None
@@ -334,11 +334,11 @@ class TbApi:
         """
         Returns a list of all devices starting with the specified name
         """
-        return self.get('/api/tenant/devices?limit=99999&textSearch=' + device_name_prefix, "Error fetching devices with name matching '" + device_name_prefix + "'")['data']
+        return self.get("/api/tenant/devices?limit=99999&textSearch=" + device_name_prefix, "Error fetching devices with name matching '" + device_name_prefix + "'")["data"]
 
 
     def get_all_devices(self):
-        return self.get("/api/tenant/devices?limit=99999", "Error fetching list of all devices")['data']
+        return self.get("/api/tenant/devices?limit=99999", "Error fetching list of all devices")["data"]
 
 
 
@@ -348,7 +348,7 @@ class TbApi:
             "type": asset_type
 
         }
-        asset = self.post('/api/asset', data, "Error adding asset")
+        asset = self.post("/api/asset", data, "Error adding asset")
         asset_id = self.get_id(asset)
 
         if server_attributes is not None:
@@ -369,7 +369,7 @@ class TbApi:
             "type": device_type,
         }
 
-        device = self.post('/api/device', data, "Error adding device")
+        device = self.post("/api/device", data, "Error adding device")
         device_id = self.get_id(device)
 
         if server_attributes is not None:
@@ -457,21 +457,21 @@ class TbApi:
         """
         Pass in a device or a device_id
         """
-        return self.delete_attributes(device, attributes, 'SERVER_SCOPE')
+        return self.delete_attributes(device, attributes, "SERVER_SCOPE")
 
 
     def delete_shared_attributes(self, device, attributes):
         """
         Pass in a device or a device_id
         """
-        return self.delete_attributes(device, attributes, 'SHARED_SCOPE')
+        return self.delete_attributes(device, attributes, "SHARED_SCOPE")
 
 
     def delete_client_attributes(self, device, attributes):
         """
         Pass in a device or a device_id
         """
-        return self.delete_attributes(device, attributes, 'CLIENT_SCOPE')
+        return self.delete_attributes(device, attributes, "CLIENT_SCOPE")
 
 
     def delete_attributes(self, device, attributes, scope):
@@ -530,7 +530,7 @@ class TbApi:
         if isinstance(telemetry_keys, str):
             keys = telemetry_keys
         else:
-            keys = ','.join(telemetry_keys)
+            keys = ",".join(telemetry_keys)
 
         if startTime is None:
             startTime = 0
@@ -626,7 +626,7 @@ class TbApi:
         """
         device_id = self.get_id(device)
 
-        return self.post('/api/customer/public/device/' + device_id, None, "Error assigning device '" + device_id + "' to public customer")
+        return self.post("/api/customer/public/device/" + device_id, None, "Error assigning device '" + device_id + "' to public customer")
 
 
     def delete_asset(self, asset_id):
@@ -640,11 +640,11 @@ class TbApi:
         """
         Returns True if device was deleted, False if it did not exist
         """
-        return self.delete('/api/device/' + device_id, "Error deleting device '" + device_id + "'")
+        return self.delete("/api/device/" + device_id, "Error deleting device '" + device_id + "'")
 
     @staticmethod
     def pretty_print_request(req):
-        print('{}\n{}\n{}\n\n{}'.format("-----------START-----------", req.method + ' ' + req.url, '\n'.join('{}: {}'.format(k, v) for k, v in req.headers.items()), req.body, ))
+        print("{}\n{}\n{}\n\n{}".format("-----------START-----------", req.method + " " + req.url, "\n".join("{}: {}".format(k, v) for k, v in req.headers.items()), req.body, ))
 
 
     def add_auth_header(self, headers):
@@ -662,7 +662,7 @@ class TbApi:
         self.add_auth_header(headers)
 
         if self.verbose:
-            req = requests.Request('GET', url, headers=headers)
+            req = requests.Request("GET", url, headers=headers)
             prepared = req.prepare()
             TbApi.pretty_print_request(prepared)
 
