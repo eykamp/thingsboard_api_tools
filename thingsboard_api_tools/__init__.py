@@ -80,7 +80,7 @@ class TbApi:
 
     def get_tenant_assets(self):
         """
-        Returns a list of all devices for current tenant
+        Returns a list of all assets for current tenant
         """
         return self.get('/api/tenant/assets?limit=99999', "Error retrieving assets for tenant")["data"]
 
@@ -486,7 +486,7 @@ class TbApi:
         return self.delete(f"/api/plugins/telemetry/DEVICE/{device_id}/{scope}?keys={attributes}", f"Error deleting {scope} attributes for device '{device}'")
 
 
-    def send_asset_telemetry(self, asset_id, data, scope='SERVER_SCOPE', timestamp=None,):
+    def send_asset_telemetry(self, asset_id, data, scope="SERVER_SCOPE", timestamp=None):
         if timestamp is not None:
             data = {"ts": timestamp, "values": data}
         return self.post("/api/plugins/telemetry/ASSET/" + asset_id + "/timeseries/" + scope, data, "Error sending telemetry for asset with id '" + asset_id + "'")
@@ -633,7 +633,7 @@ class TbApi:
         """
         Returns True if asset was deleted, False if it did not exist
         """
-        return self.delete('/api/asset/' + asset_id, "Error deleting device '" + asset_id + "'")
+        return self.delete("/api/asset/" + asset_id, "Error deleting asset '" + asset_id + "'")
 
 
     def delete_device(self, device_id):
