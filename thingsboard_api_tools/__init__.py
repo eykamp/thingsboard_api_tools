@@ -70,7 +70,7 @@ class TbApi:
         """
         Get customer with specified name
         """
-        customers = self.get("/api/customers?limit=99999&textSearch=" + name, "Can't find customer with name '" + name + "'")
+        customers = self.get(f"/api/customers?limit=99999&textSearch={name}", f"Can't find customer with name '{name}'")
         for customer in customers["data"]:
             if(customer["title"] == name):
                 return customer
@@ -98,7 +98,7 @@ class TbApi:
         """
         cust_id = self.get_id(cust)
 
-        return self.get("/api/customer/" + cust_id + "/devices?limit=99999", "Error retrieving devices for customer '" + cust_id + "'")["data"]
+        return self.get(f"/api/customer/{cust_id}/devices?limit=99999", f"Error retrieving devices for customer '{cust_id}'")["data"]
 
 
     def get_public_user_id(self):
@@ -116,14 +116,14 @@ class TbApi:
 
 
     def get_customer_by_id(self, cust_id):
-        return self.get("/api/customer/" + cust_id, "Could not retrieve customer with id '" + cust_id + "'")
+        return self.get(f"/api/customer/{cust_id}", f"Could not retrieve customer with id '{cust_id}'")
 
 
     def get_customers_by_name(self, cust_name_prefix):
         """
         Returns a list of all customers starting with the specified name
         """
-        return self.get("/api/customers?limit=99999&textSearch=" + cust_name_prefix, "Error retrieving customers with names starting with '" + cust_name_prefix + "'")["data"]
+        return self.get(f"/api/customers?limit=99999&textSearch={cust_name_prefix}", f"Error retrieving customers with names starting with '{cust_name_prefix}'")["data"]
 
 
     def get_customer_by_name(self, cust_name):
@@ -189,14 +189,14 @@ class TbApi:
         if additional_info is not None:
             data["additionalInfo"] = additional_info
 
-        return self.post("/api/customer", data, "Error adding customer '" + name + "'")
+        return self.post("/api/customer", data, f"Error adding customer '{name}'")
 
 
     def delete_customer_by_id(self, id):
         """
         Returns True if successful, False if the customer wasn't found
         """
-        return self.delete("/api/customer/" + id, "Error deleting customer '" + id + "'")
+        return self.delete(f"/api/customer/{id}", f"Error deleting customer '{id}'")
 
 
     def delete_customer_by_name(self, name):
@@ -205,7 +205,7 @@ class TbApi:
         """
         id = self.get_user_uuid(name)
         if id is None:
-            print("Could not find customer with name " + name)
+            print(f"Could not find customer with name {name}")
             return False
 
         return self.delete_customer_by_id(id)
@@ -217,7 +217,7 @@ class TbApi:
         """
         dashboard_id = self.get_id(dash)
         customer_id = self.get_id(customer)
-        return self.post("/api/customer/" + customer_id + "/dashboard/" + dashboard_id, None, "Could not assign dashboard '" + dashboard_id + "' to customer '" + customer_id + "'")
+        return self.post(f"/api/customer/{customer_id}/dashboard/{dashboard_id}", None, f"Could not assign dashboard '{dashboard_id}' to customer '{customer_id}'")
 
 
     def assign_dash_to_public_user(self, dash):
@@ -225,7 +225,7 @@ class TbApi:
         Pass in a dash or a dash_id
         """
         dash_id = self.get_id(dash)
-        return self.post("/api/customer/public/dashboard/" + dash_id, None, "Error assigning dash '" + dash_id + "' to public customer")
+        return self.post(f"/api/customer/public/dashboard/{dash_id}", None, f"Error assigning dash '{dash_id}' to public customer")
 
 
     def get_public_dash_url(self, dash):
@@ -244,7 +244,7 @@ class TbApi:
         Returns True if dashboard was deleted, False if it did not exist
         """
         dashboard_id = self.get_id(dash)
-        return self.delete("/api/dashboard/" + dashboard_id, "Error deleting dashboard '" + dashboard_id + "'")
+        return self.delete(f"/api/dashboard/{dashboard_id}", f"Error deleting dashboard '{dashboard_id}'")
 
 
     def create_dashboard_for_customer(self, dash_name, dash_def):
@@ -273,7 +273,7 @@ class TbApi:
         """
         Returns a list of all dashes starting with the specified name
         """
-        return self.get("/api/tenant/dashboards?limit=99999&textSearch=" + dash_name_prefix, "Error retrieving dashboards starting with '" + dash_name_prefix + "'")["data"]
+        return self.get(f"/api/tenant/dashboards?limit=99999&textSearch={dash_name_prefix}", f"Error retrieving dashboards starting with '{dash_name_prefix}'")["data"]
 
 
     def get_dashboard_by_name(self, dash_name):
@@ -293,12 +293,12 @@ class TbApi:
         Retrieve dashboard by id
         """
         dash_id = self.get_id(dash)
-        return self.get("/api/dashboard/info/" + dash_id, "Error retrieving dashboard for '" + dash_id + "'")
+        return self.get(f"/api/dashboard/info/{dash_id}", f"Error retrieving dashboard for '{dash_id}'")
 
 
     def get_dashboard_definition(self, dash):
         dash_id = self.get_id(dash)
-        return self.get("/api/dashboard/" + dash_id, "Error retrieving dashboard definition for '" + dash_id + "'")
+        return self.get(f"/api/dashboard/{dash_id}", f"Error retrieving dashboard definition for '{dash_id}'")
 
 
     def get_device_by_id(self, device_id):
@@ -308,7 +308,7 @@ class TbApi:
         if device_id is None:
             return None
         try:
-            return self.get("/api/device/" + device_id, "Could not retrieve device with id '" + device_id + "'")
+            return self.get(f"/api/device/{device_id}", f"Could not retrieve device with id '{device_id}'")
         except requests.exceptions.HTTPError as ex:
             if ex.response.status_code == 404:
                 return None
@@ -334,7 +334,7 @@ class TbApi:
         """
         Returns a list of all devices starting with the specified name
         """
-        return self.get("/api/tenant/devices?limit=99999&textSearch=" + device_name_prefix, "Error fetching devices with name matching '" + device_name_prefix + "'")["data"]
+        return self.get(f"/api/tenant/devices?limit=99999&textSearch={device_name_prefix}", f"Error fetching devices with name matching '{device_name_prefix}'")["data"]
 
 
     def get_all_devices(self):
@@ -391,7 +391,7 @@ class TbApi:
         """
         device_id = self.get_id(device)
 
-        json = self.get("/api/device/" + device_id + "/credentials", "Error retreiving device_key for device '" + device_id + "'")
+        json = self.get(f"/api/device/{device_id}/credentials", f"Error retreiving device_key for device '{device_id}'")
         return json["credentialsId"]
 
 
@@ -422,7 +422,7 @@ class TbApi:
         """
         device_id = self.get_id(device)
 
-        return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/values/attributes/" + scope, "Error retrieving " + scope + " attributes for '" + device_id + "'")
+        return self.get(f"/api/plugins/telemetry/DEVICE/{device_id}/values/attributes/{scope}", f"Error retrieving {scope} attributes for '{device_id}'")
 
 
     def set_server_attributes(self, device, attributes):
@@ -489,7 +489,7 @@ class TbApi:
     def send_asset_telemetry(self, asset_id, data, scope="SERVER_SCOPE", timestamp=None):
         if timestamp is not None:
             data = {"ts": timestamp, "values": data}
-        return self.post("/api/plugins/telemetry/ASSET/" + asset_id + "/timeseries/" + scope, data, "Error sending telemetry for asset with id '" + asset_id + "'")
+        return self.post(f"/api/plugins/telemetry/ASSET/{asset_id}/timeseries/{scope}", data, f"Error sending telemetry for asset with id '{asset_id}'")
 
 
     def send_telemetry(self, device_token, data, timestamp=None, ):
@@ -498,13 +498,13 @@ class TbApi:
         """
         if timestamp is not None:
             data = {"ts": timestamp, "values": data}
-        return self.post("/api/v1/" + device_token + "/telemetry", data, "Error sending telemetry for device with token '" + device_token + "'")
+        return self.post(f"/api/v1/{device_token}/telemetry", data, f"Error sending telemetry for device with token '{device_token}'")
 
 
     def get_telemetry_keys(self, device):
         device_id = self.get_id(device)
 
-        return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/keys/timeseries", "Error retrieving telemetry keys for device '" + device_id + "'")
+        return self.get(f"/api/plugins/telemetry/DEVICE/{device_id}/keys/timeseries", f"Error retrieving telemetry keys for device '{device_id}'")
 
 
     def get_latest_telemetry(self, device, telemetry_keys):
@@ -518,7 +518,7 @@ class TbApi:
         else:
             keys = ",".join(telemetry_keys)
 
-        return self.get("/api/plugins/telemetry/DEVICE/" + device_id + "/values/timeseries?keys=" + keys, "Error retrieving latest telemetry for device '" + device_id + "' with keys '" + keys + "'")
+        return self.get(f"/api/plugins/telemetry/DEVICE/{device_id}/values/timeseries?keys={keys}", f"Error retrieving latest telemetry for device '{device_id}' with keys '{keys}'")
 
 
     def get_telemetry(self, device, telemetry_keys, startTime=None, endTime=None, interval=None, limit=None, agg=None):
@@ -557,7 +557,7 @@ class TbApi:
     def delete_telemetry(self, device, key, timestamp):
         device_id = self.get_id(device)
 
-        return self.delete("/api/plugins/telemetry/DEVICE/" + device_id + "/timeseries/values?key=" + key + "&ts=" + str(int(timestamp)), "Error deleting telemetry for device '" + device_id + "'")
+        return self.delete(f"/api/plugins/telemetry/DEVICE/{device_id}/timeseries/values?key={key}&ts={str(int(timestamp))}", f"Error deleting telemetry for device '{device_id}'")
 
 
     def is_public_dashboard(self, dashboard):
@@ -626,21 +626,21 @@ class TbApi:
         """
         device_id = self.get_id(device)
 
-        return self.post("/api/customer/public/device/" + device_id, None, "Error assigning device '" + device_id + "' to public customer")
+        return self.post(f"/api/customer/public/device/{device_id}", None, f"Error assigning device '{device_id}' to public customer")
 
 
     def delete_asset(self, asset_id):
         """
         Returns True if asset was deleted, False if it did not exist
         """
-        return self.delete("/api/asset/" + asset_id, "Error deleting asset '" + asset_id + "'")
+        return self.delete(f"/api/asset/{asset_id}", f"Error deleting asset '{asset_id}'")
 
 
     def delete_device(self, device_id):
         """
         Returns True if device was deleted, False if it did not exist
         """
-        return self.delete("/api/device/" + device_id, "Error deleting device '" + device_id + "'")
+        return self.delete(f"/api/device/{device_id}", f"Error deleting device '{device_id}'")
 
     @staticmethod
     def pretty_print_request(req):
