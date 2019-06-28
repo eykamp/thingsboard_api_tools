@@ -1,4 +1,4 @@
-# Copyright 2018, Chris Eykamp
+# Copyright 2018-2019, Chris Eykamp
 
 # MIT License
 
