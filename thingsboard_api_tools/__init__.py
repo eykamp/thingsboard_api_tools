@@ -251,7 +251,6 @@ class TbApi:
         """
         Returns dashboard definition
         """
-
         data = {
             "configuration": dash_def["configuration"],
             "title": dash_name,
@@ -341,7 +340,6 @@ class TbApi:
         return self.get("/api/tenant/devices?limit=99999", "Error fetching list of all devices")["data"]
 
 
-
     def add_asset(self, asset_name, asset_type, shared_attributes, server_attributes):
         data = { 
             "name": asset_name,
@@ -358,6 +356,7 @@ class TbApi:
             self.set_shared_attributes(asset_id, shared_attributes)
 
         return asset
+
 
     def add_device(self, device_name, device_type, shared_attributes, server_attributes):
         """
