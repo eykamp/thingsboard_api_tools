@@ -563,25 +563,7 @@ class TbApi:
         return self.delete(f"/api/plugins/telemetry/DEVICE/{device_id}/timeseries/values?key={key}&ts={str(int(timestamp))}", f"Error deleting telemetry for device '{device_id}'")
 
 
-    def is_public_dashboard(self, dashboard):
-        """
-        Return True if dashboard is owned by the public user False otherwise
-        """
-
-        # Do we have a dashboard or just an id?
-        if isinstance(dashboard, str):
-            dashboard = self.get_dashboard_by_id(dashboard)
-            if dashboard is None:
-                return False
-
-        if dashboard["assignedCustomers"] is None:
-            return False
-
-        for c in dashboard["assignedCustomers"]:
-            if c["public"]:
-                return True
-
-        return False
+    
 
 
     def is_public_device(self, device):
@@ -942,6 +924,19 @@ class Dashboard(TbObject):
     def __str__(self) -> str:
         return f"Dashboard ({self.name}, {self.title}, {self.id.id})"
 
+    def is_public(self):
+        """
+        Return True if dashboard is owned by the public user False otherwise
+        """
+        if self.assigned_customers is None:
+            return False
+
+        for c in self.assigned_customers:
+            if c.public:
+                return True
+
+        return False
+
 
 class DashboardDef(Dashboard):
     """ Extends Dashboard by adding a configuration. """
@@ -1087,5 +1082,6 @@ compare_dicts(dev_json, json.loads(d.json(by_alias=True)))
 
 # Check GuidList[Id, Customer] ==> should fail
 
+assert(dash.is_public() is True)
 
 pass
