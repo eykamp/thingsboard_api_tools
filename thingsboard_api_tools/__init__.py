@@ -982,7 +982,6 @@ def compare_dicts(d1, d2, path=""):
 # Get the secret stuff
 from config import mothership_url, thingsboard_username, thingsboard_password
 
-
 print("Loading data...", end=None)
 tbapi = TbApi(mothership_url, thingsboard_username, thingsboard_password)
 
