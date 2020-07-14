@@ -21,6 +21,10 @@ import json
 import requests
 import time
 from http import HTTPStatus
+from typing import  Optional, Dict, List, Any, Generic, TypeVar, Union
+from datetime import datetime
+from pydantic import BaseModel, Field
+from devtools import debug
 
 
 class TbApi:
@@ -724,3 +728,365 @@ class TbApi:
         except requests.exceptions.RequestException as ex:
             ex.args += (f"RESPONSE BODY: {response.content.decode('utf8')}",)        # Append our response to the exception to make it easier to figure out WTF went wrong
             raise
+
+
+
+
+class TbObject(BaseModel):
+    class Config:
+        json_encoders = {
+            datetime: lambda v: int(v.timestamp() * 1000),  # TB expresses datetimes as epochs in milliseonds
+        }
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+
+class Id(TbObject):
+    id: str
+    entity_type: Optional[str] = Field(alias="entityType")
+
+    def __str__(self) -> str:
+        return f"Id ({self.entity_type}, {self.id})"
+
+
+class Device(TbObject):
+    id: Id
+    additional_info: Optional[str] = Field(alias="additionalInfo")
+    tenant_id: Id = Field(alias="tenantId")
+    customer_id: Id = Field(alias="customerId")
+    name: Optional[str]
+    type: Optional[str]
+    label: Optional[str]
+    created_time: datetime = Field(alias="createdTime")
+
+
+class Customer(TbObject):
+    id: Id
+    title: Optional[str]
+    created_time: datetime = Field(alias="createdTime")
+    tenant_id: Id = Field(alias="tenantId")
+    name: Optional[str]
+    address: Optional[str]
+    address2: Optional[str]
+    city: Optional[str]
+    state: Optional[str]
+    zip: Optional[str]
+    country: Optional[str]
+    email: Optional[str]
+    phone: Optional[str]
+    additional_info: Optional[Dict] = Field(alias="additionalInfo")
+    # customer_id: Id = Field(alias="customerId")
+    # public: bool
+
+    def __str__(self) -> str:
+        return "Customer (" + str(self.title) + ", " + str(self.id.id) + ")"
+
+    def is_public(self) -> bool:
+        if not self.additional_info:
+            return False
+        # else
+        return self.additional_info.get("isPublic", False)
+
+class CustomerId(TbObject):
+    customer_id: Id = Field(alias="customerId")
+    public: bool
+    title: str
+
+    def __str__(self) -> str:
+        return f"CustomerId ({self.title}, {self.customer_id.id})"
+
+
+class Widget(TbObject):
+    id: Union[Id, str]      # in a DashboardDef, widgets have GUIDs for ids; other times they have full-on Id objects
+    is_system_type: bool = Field(alias="isSystemType")
+    bundle_alias: str = Field(alias="bundleAlias")
+    type_alias: str = Field(alias="typeAlias")
+    type: str
+    title: str
+    size_x: int = Field(alias="sizeX")
+    size_y: int = Field(alias="sizeY")
+    config: dict
+    # index: str
+
+    def __str__(self) -> str:
+        return f"Widget ({self.title}, {self.type}, {self.index})"
+
+
+class SubWidget(TbObject):      # used within States <- Layouts <- Main <- Widgets
+    size_x: int = Field(alias="sizeX")
+    size_y: int = Field(alias="sizeY")
+    mobile_height: Optional[int] = Field(alias="mobileHeight")
+    row: int
+    col: int
+    # index: str
+
+    def __str__(self) -> str:
+        return f"SubWidget ({self.index})"
+
+
+class GridSetting(TbObject):        # used within States <- Layouts <- Main <- GridSetting
+    background_color: str = Field(alias="backgroundColor")  # "#3e4b6b",
+    color: str  # "rgba(1, 1, 1, 0.87)",
+    columns: int
+    margins: list  # [10, 10],
+    background_size_mode: str = Field(alias="backgroundSizeMode")  # "100%",
+    auto_fill_height: bool = Field(alias="autoFillHeight")
+    mobile_auto_fill_height: bool = Field(alias="mobileAutoFillHeight")
+    mobile_row_height: int = Field(alias="mobileRowHeight")
+
+    def __str__(self) -> str:
+        return f"GridSetting"
+
+
+class Layout(TbObject):      # used within States <- Layouts <- Main <- Widgets
+    widgets: Dict[str, SubWidget]
+    grid_settings: GridSetting = Field(alias="gridSettings")
+    # index: str          # new name of the layout
+
+    def __str__(self) -> str:
+        return f"Layout ({len(self.widgets)})"
+
+
+class State(TbObject):      # referred to in "default", the only object nested inside of States
+    name: str
+    root: bool
+    layouts: Dict[str, Layout]
+    # widgets: list   # skipping the step of going through widgets, this is the same as self.layouts["main"].widgets
+    # index: str
+
+    def __str__(self) -> str:
+        return f"State ({self.index} {self.name})"
+
+
+class Filter(TbObject):
+    type: Optional[str]
+    resolve_multiple: Optional[bool] = Field(alias="resolveMultiple")
+    single_entity: Optional[Id] = Field(alias="singleEntity")
+    entity_type: Optional[str] = Field(alias="entityType")
+    entity_name_filter: Optional[str] = Field(alias="entityNameFilter")
+
+    def __str__(self) -> str:
+        return f"Filter ({self.type}, {self.single_entity.id})"
+
+
+class EntityAlias(TbObject):
+    id: str
+    alias: str
+    filter: Filter
+
+    # index: str
+
+    def __str__(self) -> str:
+        return f"Entity Alias ({self.alias}, {self.id})"
+
+
+class Setting(TbObject):
+    state_controller_id: str = Field(alias="stateControllerId")
+    show_title: bool = Field(alias="showTitle")
+    show_dashboards_select: bool = Field(alias="showDashboardsSelect")
+    show_entities_select: bool = Field(alias="showEntitiesSelect")
+    show_dashboard_timewindow: bool = Field(alias="showDashboardTimewindow")
+    show_dashboard_export: bool = Field(alias="showDashboardExport")
+    toolbar_always_open: bool = Field(alias="toolbarAlwaysOpen")
+    title_color: str = Field(alias="titleColor")
+
+    def __str__(self) -> str:
+        return f"Settings ({self.dict()})"
+
+
+class RealTime(TbObject):
+    interval: int
+    time_window_ms: int = Field(alias="timewindowMs")
+
+    def __str__(self) -> str:
+        return f"Timewindow ({self.dict()})"
+
+
+class Aggregation(TbObject):
+    type: str
+    limit: int
+
+    def __str__(self) -> str:
+        return f"Timewindow ({self.dict()})"
+
+
+class TimeWindow(TbObject):
+    real_time: RealTime = Field(alias="realtime")
+    aggregation: Aggregation
+
+    def __str__(self) -> str:
+        return f"Timewindow ({self.dict()})"
+
+
+class Configuration(TbObject):
+    widgets: Dict[str, Widget]
+    states: Dict[str, State]
+    entity_aliases: Dict[str, EntityAlias] = Field(alias="entityAliases")
+    timewindow: TimeWindow
+    settings: Setting
+    # name: str
+
+    def __str__(self) -> str:
+        return f"Configuration"
+
+
+class Dashboard(TbObject):
+    id: Id
+    created_time: datetime = Field(alias="createdTime")
+    tenant_id: Id = Field(alias="tenantId")
+    name: Optional[str]
+    title: Optional[str]
+    assigned_customers: List[CustomerId] = Field(alias="assignedCustomers")
+
+    def __str__(self) -> str:
+        return f"Dashboard ({self.name}, {self.title}, {self.id.id})"
+
+
+class DashboardDef(Dashboard):
+    """ Extends Dashboard by adding a configuration. """
+    configuration: Configuration
+
+    def __str__(self) -> str:
+        return f"Dashboard Definition ({self.name}, {self.title}, {self.id.id})"
+
+
+#####################################
+# Tests
+
+import json
+
+def get_birdhouses(tbapi):
+    return tbapi.get_devices_by_name("Birdhouse")
+
+def compare_dicts(d1, d2, path=""):
+    for k in d1:
+        if (k not in d2):
+            print (path, ":")
+            print (k + " as key not in d2", "\n")
+        else:
+            if type(d1[k]) is dict:
+                if path == "":
+                    path = k
+                else:
+                    path = path + "->" + k
+                compare_dicts(d1[k], d2[k], path)
+            else:
+                if d1[k] != d2[k]:
+                    print (path, ":")
+                    print (" - ", k," : ", d1[k])
+                    print (" + ", k," : ", d2[k])
+
+
+
+# Get the secret stuff
+from config import mothership_url, thingsboard_username, thingsboard_password
+
+
+print("Loading data...", end=None)
+tbapi = TbApi(mothership_url, thingsboard_username, thingsboard_password)
+
+dev_json = tbapi.get_device_by_name("Birdhouse 181")
+cust_json = tbapi.get_customer("Birdhouse 181")
+dash_json = tbapi.get_dashboard_by_name("Birdhouse 001 Dash")
+dash_def_json = tbapi.get_dashboard_definition("0d538a70-d996-11e7-a394-bf47d8c29be7")
+
+print(" done.")
+
+id = Id(**{"id": "12345", "entity_type": "TEST"})
+
+print(id)
+d = Device(**dev_json)
+c = Customer(**cust_json)
+
+
+# debug(dash_def_json)
+dash = Dashboard.parse_obj(dash_json)
+dash_def = DashboardDef.parse_obj(dash_def_json)
+
+
+try:
+    print(c.additionalInfo)     # Should not be accessible -- we remapped this name
+    assert(False)
+except AttributeError:
+    pass
+
+
+
+# Assign an unknown attribute -- should raise exception
+try:
+    c.unknown = "LLL"
+    assert(False)
+except ValueError:
+    pass
+
+# Assign an unknown attribute II -- should raise exception
+try:
+    c["unknown"] = "LLL"
+    assert(False)
+except TypeError:
+    pass
+
+# Access an unknown attribute -- should raise exception
+try:
+    print(c.unknown)
+    assert(False)
+except AttributeError:
+    pass
+
+# Access an unknown attribute II -- should raise exception
+try:
+    print(c["strange"])
+    assert(False)
+except TypeError:
+    pass
+
+
+# Construct with an unknown attribute -- should raise exception
+bad_cust_json = cust_json.copy()
+bad_cust_json["unknown_attr"] = 666
+try:
+    bad_c = Customer.from_dict(bad_cust_json)
+    assert(False)
+except AttributeError:
+    pass
+
+# Time handled correctly (also verifies name translation: createdTime -> created_time -> createdTime)
+assert(isinstance(c.created_time, datetime))            # Rehydrated time is a datetime
+assert(isinstance(json.loads(c.json(by_alias=True))["createdTime"], int))     # Serialized time is int
+
+
+# Dashboard built right?
+assert(type(dash.assigned_customers[0]) is CustomerId)
+
+# Check attribute renaming at top level
+assert(d.created_time)
+try:
+    d.createdTime
+    assert(False)
+except AttributeError:
+    pass
+assert(json.loads(d.json(by_alias=True)).get("createdTime"))
+assert(json.loads(d.json(by_alias=True)).get("created_time") is None)
+
+# Check nested attribute renaming
+assert(d.customer_id.entity_type)
+try:
+    d.customer_id.entityType
+    assert(False)
+except AttributeError:
+    pass
+assert(json.loads(d.json(by_alias=True)).get("customerId", {}).get("entityType"))
+assert(json.loads(d.json(by_alias=True)).get("customerId", {}).get("entity_type") is None)
+
+# assert(Device.from_dict(d.to_dict).to_dict == d.to_dict)
+
+
+# Serialized looks like original?
+compare_dicts(dev_json, json.loads(d.json(by_alias=True)))
+
+
+# Check GuidList[Id, Customer] ==> should fail
+
+
+pass
