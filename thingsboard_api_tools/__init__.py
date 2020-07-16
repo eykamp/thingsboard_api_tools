@@ -750,7 +750,6 @@ class TbApi:
 
 
 
-
 class TbObject(BaseModel):
     class Config:
         json_encoders = {
@@ -1017,14 +1016,14 @@ from config import mothership_url, thingsboard_username, thingsboard_password
 print("Loading data...", end=None)
 tbapi = TbApi(mothership_url, thingsboard_username, thingsboard_password)
 
-dev_json = tbapi.get_device_by_name("Birdhouse 181")
-cust_json = tbapi.get_customer("Birdhouse 181")
+dev_json = tbapi.get_device_by_name("Birdhouse 001")
+cust_json = tbapi.get_customer("Birdhouse 001")
 dash_json = tbapi.get_dashboard_by_name("Birdhouse 001 Dash")
 dash_def_json = tbapi.get_dashboard_definition("0d538a70-d996-11e7-a394-bf47d8c29be7")
 
 print(" done.")
 
-id = Id(**{"id": "12345", "entity_type": "TEST"})
+id = Id(id="12345", entity_type="TEST")
 
 print(id)
 d = Device(**dev_json)
