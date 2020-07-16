@@ -143,41 +143,6 @@ class TbApi:
 
         return None
 
-    # TODO: Move to Customer.update()
-    def update_customer(self, cust, name=None, address=None, address2=None, city=None, state=None, zip=None, country=None, email=None, phone=None, additional_info=None):
-        """
-        Updates an existing customer record --> pass in customer object, or a customer id additional_info is a dict
-        """
-
-        # Check if user passed a customer_id; if so, retrieve the customer object
-        if isinstance(cust, str):
-            cust = self.get_customer_by_id(cust)
-
-        if name is not None:
-            cust["title"] = name
-        if address is not None:
-            cust["address"] = address
-        if address2 is not None:
-            cust["address2"] = address2
-        if city is not None:
-            cust["city"] = city
-        if state is not None:
-            cust["state"] = state
-        if zip is not None:
-            cust["zip"] = zip
-        if country is not None:
-            cust["country"] = country
-        if email is not None:
-            cust["email"] = email
-        if phone is not None:
-            cust["phone"] = phone
-        if additional_info is not None:
-            cust["additionalInfo"] = additional_info
-
-        return self.post("/api/customer", cust, "Error updating customer")
-
-
-    # TODO: Move to Customer(tbapi, name, ....).save()  ??
     def add_customer(self, name, address, address2, city, state, zip, country, email, phone, additional_info=None):
         """
         Adds customer and returns JSON customer from database
@@ -694,7 +659,7 @@ class TbApi:
         response = requests.get(url, headers=headers)
         self.validate_response(response, msg)
 
-        return json.loads(response.text)
+        return response.json()
 
 
     def delete(self, params, msg):
@@ -718,7 +683,7 @@ class TbApi:
         return True
 
 
-    def post(self, params, data, msg):
+    def post(self, params: str, data, msg: str):
         """
         Data can be a string or a dict; if it's a dict, it will be flattened
         """
@@ -743,6 +708,27 @@ class TbApi:
         return response.json()
 
 
+    def post2(self, params: str, json: str, msg: str):
+        """
+        """
+        url = self.mothership_url + params
+        headers = {"Accept": "application/json", "Content-Type": "application/json"}
+        self.add_auth_header(headers)
+
+        if self.verbose:
+            req = requests.Request("POST", url, data=json, headers=headers)
+            prepared = req.prepare()
+            TbApi.pretty_print_request(prepared)
+
+        response = requests.post(url, data=json, headers=headers)
+        self.validate_response(response, msg)
+
+        if response.text is None or response.text == "":
+            return {}
+
+        return json.loads(response.text)
+
+
     @staticmethod
     def validate_response(response, msg):
         try:
@@ -750,8 +736,6 @@ class TbApi:
         except requests.exceptions.RequestException as ex:
             ex.args += (f"RESPONSE BODY: {response.content.decode('utf8')}",)        # Append our response to the exception to make it easier to figure out WTF went wrong
             raise
-
-
 
 class TbObject(BaseModel):
     class Config:
@@ -763,7 +747,15 @@ class TbObject(BaseModel):
         return self.__str__()
 
 
-class Id(TbObject):
+class TbObject(TbModel):
+    __slots__ = ["tbapi"]   # tbapi: TbApi
+                            # without triggering Pydantic
+    def __init__(self, tbapi: TbApi, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        object.__setattr__(self, "tbapi", tbapi)
+        pass
+        
+class Id(TbModel):
     id: str
     entity_type: Optional[str] = Field(alias="entityType")
 
@@ -771,7 +763,8 @@ class Id(TbObject):
         return f"Id ({self.entity_type}, {self.id})"
 
 
-class Device(TbObject):
+class Device2(TbObject):
+    # class DeviceModel(TbModel):
     id: Id
     additional_info: Optional[str] = Field(alias="additionalInfo")
     tenant_id: Id = Field(alias="tenantId")
@@ -786,8 +779,48 @@ class Device(TbObject):
         Shared = "SHARED_SCOPE"
         Client = "CLIENT_SCOPE"
 
+    # def __init__(self, tbapi, *args, **kwargs):
+    #     self.tbapi = tbapi
+        # self.model = DeviceModel(*args, **kwargs)
 
-class Customer(TbObject):
+
+class Device():
+    class Model(TbModel):
+        id: Id
+        additional_info: Optional[str] = Field(alias="additionalInfo")
+        tenant_id: Id = Field(alias="tenantId")
+        customer_id: Id = Field(alias="customerId")
+        name: Optional[str]
+        type: Optional[str]
+        label: Optional[str]
+        created_time: datetime = Field(alias="createdTime")
+
+    def __setattr__(self, name, value):
+        if name in ["model", "tbapi"]:
+            object.__setattr__(self, name, value) # self.__dict__[name] = value
+        else:
+            TbModel.__setattr__(self.model, name, value)
+
+    def __getattribute__(self, name):
+        if name in object.__getattribute__(self, "model").__dict__.keys():
+            m = object.__getattribute__(self, "model")
+            return TbModel.__getattribute__(m, name)
+        # else:
+        return object.__getattribute__(self, name)
+
+    # def __getattribute__(self, name):
+    #     return self.__getattr__(name)
+
+    def __init__(self, tbapi, *args, **kwargs):
+        print("hellow")
+        self.model = type(self).Model(*args, **kwargs)
+        self.tbapi = tbapi
+
+    def get_tenant_id():
+        return self.model.tenant_id
+
+
+class Customer(TbModel):
     id: Id
     title: Optional[str]
     created_time: datetime = Field(alias="createdTime")
@@ -814,7 +847,39 @@ class Customer(TbObject):
         # else
         return self.additional_info.get("isPublic", False)
 
-class CustomerId(TbObject):
+    def update(self, name=None, address=None, address2=None, city=None, state=None, zip=None, country=None, email=None, phone=None, additional_info=None):
+        """
+        Updates an existing customer record. Pass in keywords to change.
+        """
+
+        # Check if user passed a customer_id; if so, retrieve the customer object
+        if isinstance(cust, str):
+            cust = self.get_customer_by_id(cust)
+
+        if name is not None:
+            self.title = name
+        if address is not None:
+            self.address = address
+        if address2 is not None:
+            self.address2 = address2
+        if city is not None:
+            self.city = city
+        if state is not None:
+            self.state = state
+        if zip is not None:
+            self.zip = zip
+        if country is not None:
+            self.country = country
+        if email is not None:
+            self.email = email
+        if phone is not None:
+            self.phone = phone
+        if additional_info is not None:
+            self.additionalInfo = additional_info
+
+        return self.tbapi.post2("/api/customer", self.json(by_alias=True), "Error updating customer")
+
+class CustomerId(TbModel):
     customer_id: Id = Field(alias="customerId")
     public: bool
     title: str
@@ -823,7 +888,7 @@ class CustomerId(TbObject):
         return f"CustomerId ({self.title}, {self.customer_id.id})"
 
 
-class Widget(TbObject):
+class Widget(TbModel):
     id: Union[Id, str]      # in a DashboardDef, widgets have GUIDs for ids; other times they have full-on Id objects
     is_system_type: bool = Field(alias="isSystemType")
     bundle_alias: str = Field(alias="bundleAlias")
@@ -839,7 +904,7 @@ class Widget(TbObject):
         return f"Widget ({self.title}, {self.type}, {self.index})"
 
 
-class SubWidget(TbObject):      # used within States <- Layouts <- Main <- Widgets
+class SubWidget(TbModel):      # used within States <- Layouts <- Main <- Widgets
     size_x: int = Field(alias="sizeX")
     size_y: int = Field(alias="sizeY")
     mobile_height: Optional[int] = Field(alias="mobileHeight")
@@ -851,7 +916,7 @@ class SubWidget(TbObject):      # used within States <- Layouts <- Main <- Widge
         return f"SubWidget ({self.index})"
 
 
-class GridSetting(TbObject):        # used within States <- Layouts <- Main <- GridSetting
+class GridSetting(TbModel):        # used within States <- Layouts <- Main <- GridSetting
     background_color: str = Field(alias="backgroundColor")  # "#3e4b6b",
     color: str  # "rgba(1, 1, 1, 0.87)",
     columns: int
@@ -865,7 +930,7 @@ class GridSetting(TbObject):        # used within States <- Layouts <- Main <- G
         return f"GridSetting"
 
 
-class Layout(TbObject):      # used within States <- Layouts <- Main <- Widgets
+class Layout(TbModel):      # used within States <- Layouts <- Main <- Widgets
     widgets: Dict[str, SubWidget]
     grid_settings: GridSetting = Field(alias="gridSettings")
     # index: str          # new name of the layout
@@ -874,7 +939,7 @@ class Layout(TbObject):      # used within States <- Layouts <- Main <- Widgets
         return f"Layout ({len(self.widgets)})"
 
 
-class State(TbObject):      # referred to in "default", the only object nested inside of States
+class State(TbModel):      # referred to in "default", the only object nested inside of States
     name: str
     root: bool
     layouts: Dict[str, Layout]
@@ -885,7 +950,7 @@ class State(TbObject):      # referred to in "default", the only object nested i
         return f"State ({self.index} {self.name})"
 
 
-class Filter(TbObject):
+class Filter(TbModel):
     type: Optional[str]
     resolve_multiple: Optional[bool] = Field(alias="resolveMultiple")
     single_entity: Optional[Id] = Field(alias="singleEntity")
@@ -896,7 +961,7 @@ class Filter(TbObject):
         return f"Filter ({self.type}, {self.single_entity.id})"
 
 
-class EntityAlias(TbObject):
+class EntityAlias(TbModel):
     id: str
     alias: str
     filter: Filter
@@ -907,7 +972,7 @@ class EntityAlias(TbObject):
         return f"Entity Alias ({self.alias}, {self.id})"
 
 
-class Setting(TbObject):
+class Setting(TbModel):
     state_controller_id: str = Field(alias="stateControllerId")
     show_title: bool = Field(alias="showTitle")
     show_dashboards_select: bool = Field(alias="showDashboardsSelect")
@@ -921,7 +986,7 @@ class Setting(TbObject):
         return f"Settings ({self.dict()})"
 
 
-class RealTime(TbObject):
+class RealTime(TbModel):
     interval: int
     time_window_ms: int = Field(alias="timewindowMs")
 
@@ -929,7 +994,7 @@ class RealTime(TbObject):
         return f"Timewindow ({self.dict()})"
 
 
-class Aggregation(TbObject):
+class Aggregation(TbModel):
     type: str
     limit: int
 
@@ -937,7 +1002,7 @@ class Aggregation(TbObject):
         return f"Timewindow ({self.dict()})"
 
 
-class TimeWindow(TbObject):
+class TimeWindow(TbModel):
     real_time: RealTime = Field(alias="realtime")
     aggregation: Aggregation
 
@@ -945,7 +1010,7 @@ class TimeWindow(TbObject):
         return f"Timewindow ({self.dict()})"
 
 
-class Configuration(TbObject):
+class Configuration(TbModel):
     widgets: Dict[str, Widget]
     states: Dict[str, State]
     entity_aliases: Dict[str, EntityAlias] = Field(alias="entityAliases")
@@ -957,7 +1022,7 @@ class Configuration(TbObject):
         return f"Configuration"
 
 
-class Dashboard(TbObject):
+class Dashboard(TbModel):
     id: Id
     created_time: datetime = Field(alias="createdTime")
     tenant_id: Id = Field(alias="tenantId")
@@ -1103,7 +1168,15 @@ print(" done.")
 id = Id(id="12345", entity_type="TEST")
 
 print(id)
-d = Device(**dev_json)
+d = Device(tbapi, **dev_json)
+
+print("d.id", d.id)
+d.id = 555
+# d.bad = 67
+print("d.id", d.id)
+pass
+
+
 c = Customer(**cust_json)
 
 
