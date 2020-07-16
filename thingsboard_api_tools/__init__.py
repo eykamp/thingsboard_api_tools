@@ -25,7 +25,7 @@ from typing import  Optional, Dict, List, Any, Generic, TypeVar, Union
 from datetime import datetime
 from pydantic import BaseModel, Field
 from devtools import debug
-
+from enum import Enum
 
 class TbApi:
 
@@ -321,6 +321,7 @@ class TbApi:
         """
         Returns named device object, or None if it can't be found
         """
+        # TODO: Is None check needed?
         if device_id is None:
             return None
         try:
@@ -415,6 +416,7 @@ class TbApi:
 
 
     # TODO: Move to Device.get_server_attributes()
+    # TODO: Pass enum values here instead of strings (see test code for example)
     def get_server_attributes(self, device):
         """
         Pass in a device or a device_id
@@ -439,6 +441,7 @@ class TbApi:
 
 
     # TODO: Move to Device.get_attributes(scope)
+    # TODO: Make scope a Device.Scope enum type  (Device.Scope.name is a pretty name, Device.Scope.value is something the server will consume)
     def get_attributes(self, device, scope):
         """
         Pass in a device or a device_id
@@ -778,6 +781,11 @@ class Device(TbObject):
     label: Optional[str]
     created_time: datetime = Field(alias="createdTime")
 
+    class Scope(Enum):
+        Server = "SERVER_SCOPE"
+        Shared = "SHARED_SCOPE"
+        Client = "CLIENT_SCOPE"
+
 
 class Customer(TbObject):
     id: Id
@@ -1020,6 +1028,75 @@ dev_json = tbapi.get_device_by_name("Birdhouse 001")
 cust_json = tbapi.get_customer("Birdhouse 001")
 dash_json = tbapi.get_dashboard_by_name("Birdhouse 001 Dash")
 dash_def_json = tbapi.get_dashboard_definition("0d538a70-d996-11e7-a394-bf47d8c29be7")
+
+
+
+# TODO: Make these work:
+# assert isinstance(tbapi.get_device_by_id(device.id.id), Device)     # Retrieve a device by its guid
+# assert isinstance(tbapi.get_device_by_id(device.id), Device)        # Retrieve a device by an Id object
+# assert tbapi.get_device_by_id("not_really_a_guid") is None          # Non-esistent guid returns None
+# assert tbapi.get_device_by_id(None) is None                         # None returns None
+
+# assert tbapi.get_device_by_name("Does Not Exist") is None
+
+# devices = tbapi.get_devices_by_name("Birdhouse 0")
+# assert len(devices) > 1
+# assert isinstance(devices[0], Device)
+
+# devices = tbapi.get_devices_by_name("Does Not Exist")
+# assert len(devices) == 0
+
+# devices = tbapi.get_all_devices()
+# assert len(devices) > 1
+# assert isinstance(devices[0], Device)
+
+# device = tbapi.get_device_by_name("Birdhouse 001")
+# assert isinstance(device, Device)
+# assert isinstance(device.id, Id)
+# token = Device.get_token()
+# assert isinstance(token, str)
+# assert len(token) == 20 # TODO: Verify right number here if it's not 20
+
+# # Make sure these calls produce equivalent results
+# attrs1 = Device.get_server_attributes()
+# attrs2 = Device.get_attributes(Device.Scope.Server)
+# assert attrs1 == attrs2
+# assert len(attrs1) > 0
+
+# attrs1 = Device.get_shared_attributes()
+# attrs2 = Device.get_attributes(Device.Scope.Shared)
+# assert attrs1 == attrs2
+# assert len(attrs1) > 0
+
+# attrs1 = Device.get_client_attributes()
+# attrs2 = Device.get_attributes(Device.Scope.Client)
+# assert attrs1 == attrs2
+# assert len(attrs1) > 0
+
+# # Set/retrieve/delete attributes
+# def test_attributes(device: Device, scope: Device.Scope):
+#     key = "test_delete_me"
+#     val = 12345
+
+#     # Verify key doesn't exist
+#     attrs = Device.get_attributes(scope)
+#     assert attrs.get(key) is None
+
+#     # Set
+#     device.set_attributes({key: val}, scope)
+#     attrs = Device.get_attributes(scope)
+#     attrs = Device.get_attributes(scope)
+#     assert attrs.get(key) == 12345
+
+#     # Cleanup
+#     device.delete_attributes([key])
+#     attrs = Device.get_attributes(scope)
+#     assert attrs.get(key) is None
+
+# test_attributes(device, Device.Scope.Server)
+# test_attributes(device, Device.Scope.Shared)
+# test_attributes(device, Device.Scope.Client)
+
 
 print(" done.")
 
