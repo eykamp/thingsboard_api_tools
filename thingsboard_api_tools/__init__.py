@@ -96,6 +96,7 @@ class TbApi:
         return self.get("/api/tenant/devices?limit=99999", "Error retrieving devices for tenant")["data"]
 
 
+    # TODO: Move to Customer.get_devices()
     def get_customer_devices(self, cust):
         """
         Returns a list of all devices associated with a customer; pass in customer object or id
@@ -112,6 +113,7 @@ class TbApi:
         return self.get_user_uuid("Public")
 
 
+    # TODO: ???
     def get_user_uuid(self, name):
         """
         Returns UUID of named customer, or None if user not found
@@ -141,6 +143,7 @@ class TbApi:
 
         return None
 
+    # TODO: Move to Customer.update()
     def update_customer(self, cust, name=None, address=None, address2=None, city=None, state=None, zip=None, country=None, email=None, phone=None, additional_info=None):
         """
         Updates an existing customer record --> pass in customer object, or a customer id additional_info is a dict
@@ -174,6 +177,7 @@ class TbApi:
         return self.post("/api/customer", cust, "Error updating customer")
 
 
+    # TODO: Move to Customer(tbapi, name, ....).save()  ??
     def add_customer(self, name, address, address2, city, state, zip, country, email, phone, additional_info=None):
         """
         Adds customer and returns JSON customer from database
@@ -196,6 +200,7 @@ class TbApi:
         return self.post("/api/customer", data, f"Error adding customer '{name}'")
 
 
+    # TODO: Move to Customer.delete()
     def delete_customer_by_id(self, id):
         """
         Returns True if successful, False if the customer wasn't found
@@ -203,6 +208,7 @@ class TbApi:
         return self.delete(f"/api/customer/{id}", f"Error deleting customer '{id}'")
 
 
+    # TODO: Move to Customer.delete()
     def delete_customer_by_name(self, name):
         """
         Returns True if successful, False if the customer wasn't found
@@ -215,6 +221,7 @@ class TbApi:
         return self.delete_customer_by_id(id)
 
 
+    # TODO: Move to Dashboard.assign_to_customer(Customer)
     def assign_dash_to_user(self, dash, customer):
         """
         Returns dashboard definition
@@ -224,6 +231,7 @@ class TbApi:
         return self.post(f"/api/customer/{customer_id}/dashboard/{dashboard_id}", None, f"Could not assign dashboard '{dashboard_id}' to customer '{customer_id}'")
 
 
+    # TODO: Move to Customer.assign_to_public_user()   or   Custmer.assign_to_customer(get_public_user())   ???
     def assign_dash_to_public_user(self, dash):
         """
         Pass in a dash or a dash_id
@@ -232,6 +240,7 @@ class TbApi:
         return self.post(f"/api/customer/public/dashboard/{dash_id}", None, f"Error assigning dash '{dash_id}' to public customer")
 
 
+    # TODO: Move to Dashboard.get_public_url()
     def get_public_dash_url(self, dash):
 
         if not self.is_public_dashboard(dash):
@@ -243,6 +252,7 @@ class TbApi:
         return f"{self.mothership_url}/dashboard/{dashboard_id}?publicId={public_id}"
 
 
+    # TODO: Move to Dashboard.delete()
     def delete_dashboard(self, dash):
         """
         Returns True if dashboard was deleted, False if it did not exist
@@ -251,6 +261,7 @@ class TbApi:
         return self.delete(f"/api/dashboard/{dashboard_id}", f"Error deleting dashboard '{dashboard_id}'")
 
 
+    # TODO: ???
     def create_dashboard_for_customer(self, dash_name, dash_def):
         """
         Returns dashboard definition
@@ -265,6 +276,7 @@ class TbApi:
         return self.post("/api/dashboard", data, "Error creating new dashboard")
 
 
+    # TODO: Move to Dashboard.save()
     def save_dashboard(self, dash_def):
         """
         Saves a fully formed dashboard definition
@@ -299,6 +311,7 @@ class TbApi:
         return self.get(f"/api/dashboard/info/{dash_id}", f"Error retrieving dashboard for '{dash_id}'")
 
 
+    # TODO: Move to Dashboard.get_definition()
     def get_dashboard_definition(self, dash):
         dash_id = self.get_id(dash)
         return self.get(f"/api/dashboard/{dash_id}", f"Error retrieving dashboard definition for '{dash_id}'")
@@ -344,8 +357,9 @@ class TbApi:
         return self.get("/api/tenant/devices?limit=99999", "Error fetching list of all devices")["data"]
 
 
+    # TODO: ???
     def add_asset(self, asset_name, asset_type, shared_attributes, server_attributes):
-        data = { 
+        data = {
             "name": asset_name,
             "type": asset_type
 
@@ -362,6 +376,7 @@ class TbApi:
         return asset
 
 
+    # TODO: Move to Device.new(tbapi,.....).save()?
     def add_device(self, device_name, device_type, shared_attributes, server_attributes):
         """
         Returns device object
@@ -388,6 +403,7 @@ class TbApi:
         return self.get("/api/asset/types", "Error fetching list of all asset types")
 
 
+    # TODO: Move to Device.get_token()
     def get_device_token(self, device):
         """
         Pass in a device or a device_id
@@ -398,6 +414,7 @@ class TbApi:
         return json["credentialsId"]
 
 
+    # TODO: Move to Device.get_server_attributes()
     def get_server_attributes(self, device):
         """
         Pass in a device or a device_id
@@ -405,6 +422,7 @@ class TbApi:
         return self.get_attributes(device, "SERVER_SCOPE")
 
 
+    # TODO: Move to Device.get_shared_attributes()
     def get_shared_attributes(self, device):
         """
         Pass in a device or a device_id
@@ -412,6 +430,7 @@ class TbApi:
         return self.get_attributes(device, "SHARED_SCOPE")
 
 
+    # TODO: Move to Device.get_client_attributes()
     def get_client_attributes(self, device):
         """
         Pass in a device or a device_id
@@ -419,6 +438,7 @@ class TbApi:
         return self.get_attributes(device, "CLIENT_SCOPE")
 
 
+    # TODO: Move to Device.get_attributes(scope)
     def get_attributes(self, device, scope):
         """
         Pass in a device or a device_id
@@ -428,6 +448,7 @@ class TbApi:
         return self.get(f"/api/plugins/telemetry/DEVICE/{device_id}/values/attributes/{scope}", f"Error retrieving {scope} attributes for '{device_id}'")
 
 
+    # TODO: Move to Device.get_server_attributes()
     def set_server_attributes(self, device, attributes):
         """
         Pass in a device or a device_id
@@ -436,6 +457,7 @@ class TbApi:
         return self.set_attributes(device, attributes, "SERVER_SCOPE")
 
 
+    # TODO: Move to Device.get_shared_attributes()
     def set_shared_attributes(self, device, attributes):
         """
         Pass in a device or a device_id
@@ -443,6 +465,7 @@ class TbApi:
         return self.set_attributes(device, attributes, "SHARED_SCOPE")
 
 
+    # TODO: Move to Device.get_client_attributes()
     def set_client_attributes(self, device, attributes):
         """
         Pass in a device or a device_id
@@ -450,12 +473,14 @@ class TbApi:
         return self.set_attributes(device, attributes, "CLIENT_SCOPE")
 
 
+    # TODO: Move to Device.set_attributes(attributes, scope)
     def set_attributes(self, device, attributes, scope):
         device_id = self.get_id(device)
 
         return self.post(f"/api/plugins/telemetry/DEVICE/{device_id}/{scope}", attributes, f"Error setting {scope} attributes for device '{device}'")
 
 
+    # TODO: Move to Device.delete_server_attributes(attributes)
     def delete_server_attributes(self, device, attributes):
         """
         Pass in a device or a device_id
@@ -463,6 +488,7 @@ class TbApi:
         return self.delete_attributes(device, attributes, "SERVER_SCOPE")
 
 
+    # TODO: Move to Device.delete_shared_attributes(attributes)
     def delete_shared_attributes(self, device, attributes):
         """
         Pass in a device or a device_id
@@ -470,6 +496,7 @@ class TbApi:
         return self.delete_attributes(device, attributes, "SHARED_SCOPE")
 
 
+    # TODO: Move to Device.delete_client_attributes(attributes)
     def delete_client_attributes(self, device, attributes):
         """
         Pass in a device or a device_id
@@ -477,6 +504,7 @@ class TbApi:
         return self.delete_attributes(device, attributes, "CLIENT_SCOPE")
 
 
+    # TODO: Move to Device.delete_attributes(attributes, scope)
     def delete_attributes(self, device, attributes, scope):
         """
         Pass an attribute name or a list of attributes
@@ -489,13 +517,15 @@ class TbApi:
         return self.delete(f"/api/plugins/telemetry/DEVICE/{device_id}/{scope}?keys={attributes}", f"Error deleting {scope} attributes for device '{device}'")
 
 
+    # TODO: ???
     def send_asset_telemetry(self, asset_id, data, scope="SERVER_SCOPE", timestamp=None):
         if timestamp is not None:
             data = {"ts": timestamp, "values": data}
         return self.post(f"/api/plugins/telemetry/ASSET/{asset_id}/timeseries/{scope}", data, f"Error sending telemetry for asset with id '{asset_id}'")
 
 
-    def send_telemetry(self, device_token, data, timestamp=None, ):
+    # TODO: Move to Device.send_telemetry(data, timestamp)
+    def send_telemetry(self, device_token, data, timestamp=None):
         """
         Note that this requires the device's secret token, not the device_id!
         """
@@ -504,12 +534,14 @@ class TbApi:
         return self.post(f"/api/v1/{device_token}/telemetry", data, f"Error sending telemetry for device with token '{device_token}'")
 
 
+    # TODO: Move to Device.get_telementry_keys()
     def get_telemetry_keys(self, device):
         device_id = self.get_id(device)
 
         return self.get(f"/api/plugins/telemetry/DEVICE/{device_id}/keys/timeseries", f"Error retrieving telemetry keys for device '{device_id}'")
 
 
+    # TODO: Move to Device.get_latest_telemetry(telemetry_keys)
     def get_latest_telemetry(self, device, telemetry_keys):
         """
         Pass a single key, a stringified comma-separate list, a list object, or a tuple
@@ -524,6 +556,7 @@ class TbApi:
         return self.get(f"/api/plugins/telemetry/DEVICE/{device_id}/values/timeseries?keys={keys}", f"Error retrieving latest telemetry for device '{device_id}' with keys '{keys}'")
 
 
+    # TODO: Move to Device.get_telemetry(...)
     def get_telemetry(self, device, telemetry_keys, startTime=None, endTime=None, interval=None, limit=None, agg=None):
         """
         Pass a single key, a stringified comma-separate list, a list object, or a tuple
@@ -557,15 +590,14 @@ class TbApi:
         return self.get(params, error_message)
 
 
+    # TODO: Move to Device.delete_telemetry(key, timestamp)
     def delete_telemetry(self, device, key, timestamp):
         device_id = self.get_id(device)
 
         return self.delete(f"/api/plugins/telemetry/DEVICE/{device_id}/timeseries/values?key={key}&ts={str(int(timestamp))}", f"Error deleting telemetry for device '{device_id}'")
 
 
-    
-
-
+    # TODO: Move to Device.is_public()
     def is_public_device(self, device):
         """
         Return True if device is owned by the public user, False otherwise
@@ -600,11 +632,13 @@ class TbApi:
         raise ValueError(f"Could not resolve id for {obj}")
 
 
+    # TODO: Move to Device.get_customer()
     @staticmethod
     def get_customer_from_device(device):
         return device["customerId"]["id"]
 
 
+    # TODO: Move to Device.assign_to_public_user()
     def assign_device_to_public_user(self, device):
         """
         Pass in a device or a device_id
@@ -614,6 +648,7 @@ class TbApi:
         return self.post(f"/api/customer/public/device/{device_id}", None, f"Error assigning device '{device_id}' to public customer")
 
 
+    # TODO: ???
     def delete_asset(self, asset_id):
         """
         Returns True if asset was deleted, False if it did not exist
@@ -621,11 +656,13 @@ class TbApi:
         return self.delete(f"/api/asset/{asset_id}", f"Error deleting asset '{asset_id}'")
 
 
+    # TODO: Move to Device.delete()
     def delete_device(self, device_id):
         """
         Returns True if device was deleted, False if it did not exist
         """
         return self.delete(f"/api/device/{device_id}", f"Error deleting device '{device_id}'")
+
 
     @staticmethod
     def pretty_print_request(req):
@@ -700,7 +737,7 @@ class TbApi:
         if response.text is None or response.text == "":
             return {}
 
-        return json.loads(response.text)
+        return response.json()
 
 
     @staticmethod
