@@ -21,7 +21,7 @@ import json
 import requests
 import time
 from http import HTTPStatus
-from typing import  Optional, Dict, List, Any, Generic, TypeVar, Union
+from typing import  Optional, Dict, List, Any, Generic, TypeVar, Union, get_type_hints
 from datetime import datetime
 from pydantic import BaseModel, Field
 from devtools import debug
@@ -96,14 +96,14 @@ class TbApi:
         return self.get("/api/tenant/devices?limit=99999", "Error retrieving devices for tenant")["data"]
 
 
-    # TODO: Move to Customer.get_devices()
-    def get_customer_devices(self, cust):
-        """
-        Returns a list of all devices associated with a customer; pass in customer object or id
-        """
-        cust_id = self.get_id(cust)
+    # # TODO: Move to Customer.get_devices()
+    # def get_customer_devices(self, cust):
+    #     """
+    #     Returns a list of all devices associated with a customer; pass in customer object or id
+    #     """
+    #     cust_id = self.get_id(cust)
 
-        return self.get(f"/api/customer/{cust_id}/devices?limit=99999", f"Error retrieving devices for customer '{cust_id}'")["data"]
+    #     return self.get(f"/api/customer/{cust_id}/devices?limit=99999", f"Error retrieving devices for customer '{cust_id}'")["data"]
 
 
     def get_public_user_id(self):
@@ -343,18 +343,20 @@ class TbApi:
 
 
     # TODO: Move to Device.new(tbapi,.....).save()?
-    def add_device(self, device_name, device_type, shared_attributes, server_attributes):
+    def add_device(self, device_name: str, device_type: str, shared_attributes: Dict[str, Any], server_attributes: Dict[str, Any]): # -> Device:
         """
         Returns device object
         """
-
         data = {
             "name": device_name,
             "type": device_type,
         }
 
-        device = self.post("/api/device", data, "Error adding device")
-        device_id = self.get_id(device)
+        device_json = self.post("/api/device", data, "Error adding device")
+        device = Device.parse_obj(device_json)
+        device.tbapi = self
+
+        device_id = device.id.id
 
         if server_attributes is not None:
             self.set_server_attributes(device_id, server_attributes)
@@ -565,15 +567,16 @@ class TbApi:
         return self.delete(f"/api/plugins/telemetry/DEVICE/{device_id}/timeseries/values?key={key}&ts={str(int(timestamp))}", f"Error deleting telemetry for device '{device_id}'")
 
 
-    # TODO: Move to Device.is_public()
-    def is_public_device(self, device):
-        """
-        Return True if device is owned by the public user, False otherwise
-        """
-        pub_id = self.get_public_user_id()
-        return self.get_id(device["customerId"]) == pub_id
+    # # TODO: Move to Device.is_public()
+    # def is_public_device(self, device):
+    #     """
+    #     Return True if device is owned by the public user, False otherwise
+    #     """
+    #     pub_id = self.get_public_user_id()
+    #     return self.get_id(device["customerId"]) == pub_id
 
-
+    # get_id() has been moved to the TbObject class, for use in customer/device/dashboard.get_id()
+    # it now exists as TbObject.get_id, and I will phase out the use of TbApi.get_id, below.
     @staticmethod
     def get_id(obj):
         """
@@ -600,20 +603,20 @@ class TbApi:
         raise ValueError(f"Could not resolve id for {obj}")
 
 
-    # TODO: Move to Device.get_customer()
-    @staticmethod
-    def get_customer_from_device(device):
-        return device["customerId"]["id"]
+    # # TODO: Move to Device.get_customer()
+    # @staticmethod
+    # def get_customer_from_device(device):
+    #     return device["customerId"]["id"]
 
 
-    # TODO: Move to Device.assign_to_public_user()
-    def assign_device_to_public_user(self, device):
-        """
-        Pass in a device or a device_id
-        """
-        device_id = self.get_id(device)
+    # # TODO: Move to Device.assign_to_public_user()
+    # def assign_device_to_public_user(self, device):
+    #     """
+    #     Pass in a device or a device_id
+    #     """
+    #     device_id = self.get_id(device)
 
-        return self.post(f"/api/customer/public/device/{device_id}", None, f"Error assigning device '{device_id}' to public customer")
+    #     return self.post(f"/api/customer/public/device/{device_id}", None, f"Error assigning device '{device_id}' to public customer")
 
 
     # TODO: ???
@@ -624,12 +627,12 @@ class TbApi:
         return self.delete(f"/api/asset/{asset_id}", f"Error deleting asset '{asset_id}'")
 
 
-    # TODO: Move to Device.delete()
-    def delete_device(self, device_id):
-        """
-        Returns True if device was deleted, False if it did not exist
-        """
-        return self.delete(f"/api/device/{device_id}", f"Error deleting device '{device_id}'")
+    # # TODO: Move to Device.delete()
+    # def delete_device(self, device_id):
+    #     """
+    #     Returns True if device was deleted, False if it did not exist
+    #     """
+    #     return self.delete(f"/api/device/{device_id}", f"Error deleting device '{device_id}'")
 
 
     @staticmethod
@@ -708,7 +711,7 @@ class TbApi:
         return response.json()
 
 
-    def post2(self, params: str, json: str, msg: str):
+    def post2(self, params: str, json: Optional[str], msg: str):
         """
         """
         url = self.mothership_url + params
@@ -726,7 +729,7 @@ class TbApi:
         if response.text is None or response.text == "":
             return {}
 
-        return json.loads(response.text)
+        return response.json()
 
 
     @staticmethod
@@ -737,7 +740,7 @@ class TbApi:
             ex.args += (f"RESPONSE BODY: {response.content.decode('utf8')}",)        # Append our response to the exception to make it easier to figure out WTF went wrong
             raise
 
-class TbObject(BaseModel):
+class TbModel(BaseModel):
     class Config:
         json_encoders = {
             datetime: lambda v: int(v.timestamp() * 1000),  # TB expresses datetimes as epochs in milliseonds
@@ -754,7 +757,7 @@ class TbObject(TbModel):
         super().__init__(*args, **kwargs)
         object.__setattr__(self, "tbapi", tbapi)
         pass
-        
+
 class Id(TbModel):
     id: str
     entity_type: Optional[str] = Field(alias="entityType")
@@ -763,7 +766,7 @@ class Id(TbModel):
         return f"Id ({self.entity_type}, {self.id})"
 
 
-class Device2(TbObject):
+class Device(TbObject):
     # class DeviceModel(TbModel):
     id: Id
     additional_info: Optional[str] = Field(alias="additionalInfo")
@@ -779,48 +782,31 @@ class Device2(TbObject):
         Shared = "SHARED_SCOPE"
         Client = "CLIENT_SCOPE"
 
-    # def __init__(self, tbapi, *args, **kwargs):
-    #     self.tbapi = tbapi
-        # self.model = DeviceModel(*args, **kwargs)
+    def delete(self):
+        """
+        Returns True if device was deleted, False if it did not exist
+        """
+        return tbapi.delete(f"/api/device/{self.id.id}", f"Error deleting device '{self.id.id}'")
+
+    def get_customer(self):
+        return self.customer_id.id
+
+    def assign_to_public_user(self):
+        """
+        Pass in a device or a device_id
+        """
+        return tbapi.post2(f"/api/customer/public/device/{self.id.id}", None, f"Error assigning device '{self.id.id}' to public customer")
+
+    # TODO: Move to Device.is_public()
+    def is_public(self):
+        """
+        Return True if device is owned by the public user, False otherwise
+        """
+        pub_id = tbapi.get_public_user_id()
+        return self.customer_id.id == pub_id
 
 
-class Device():
-    class Model(TbModel):
-        id: Id
-        additional_info: Optional[str] = Field(alias="additionalInfo")
-        tenant_id: Id = Field(alias="tenantId")
-        customer_id: Id = Field(alias="customerId")
-        name: Optional[str]
-        type: Optional[str]
-        label: Optional[str]
-        created_time: datetime = Field(alias="createdTime")
-
-    def __setattr__(self, name, value):
-        if name in ["model", "tbapi"]:
-            object.__setattr__(self, name, value) # self.__dict__[name] = value
-        else:
-            TbModel.__setattr__(self.model, name, value)
-
-    def __getattribute__(self, name):
-        if name in object.__getattribute__(self, "model").__dict__.keys():
-            m = object.__getattribute__(self, "model")
-            return TbModel.__getattribute__(m, name)
-        # else:
-        return object.__getattribute__(self, name)
-
-    # def __getattribute__(self, name):
-    #     return self.__getattr__(name)
-
-    def __init__(self, tbapi, *args, **kwargs):
-        print("hellow")
-        self.model = type(self).Model(*args, **kwargs)
-        self.tbapi = tbapi
-
-    def get_tenant_id():
-        return self.model.tenant_id
-
-
-class Customer(TbModel):
+class Customer(TbObject):
     id: Id
     title: Optional[str]
     created_time: datetime = Field(alias="createdTime")
@@ -841,43 +827,45 @@ class Customer(TbModel):
     def __str__(self) -> str:
         return "Customer (" + str(self.title) + ", " + str(self.id.id) + ")"
 
+    # TODO: Move to Customer.get_devices()
+    def get_customer_devices(self):
+        """
+        Returns a list of all devices associated with a customer; pass in customer object or id
+        """
+        cust_id = self.get_id()
+
+        return self.tbapi.get(f"/api/customer/{cust_id}/devices?limit=99999", f"Error retrieving devices for customer '{cust_id}'")["data"]
+
     def is_public(self) -> bool:
         if not self.additional_info:
             return False
         # else
         return self.additional_info.get("isPublic", False)
 
-    def update(self, name=None, address=None, address2=None, city=None, state=None, zip=None, country=None, email=None, phone=None, additional_info=None):
+    class KwArgs(Enum):
+        name: Optional[str] = None
+        address: Optional[str] = None
+        address2: Optional[str] = None
+        city: Optional[str] = None
+        state: Optional[str] = None
+        zip: Optional[str] = None
+        country: Optional[str] = None
+        email: Optional[str] = None
+        phone: Optional[str] = None
+        additional_info: Optional[str] = None
+        
+    # def update(self, name=None, address=None, address2=None, city=None, state=None, zip=None, country=None, email=None, phone=None, additional_info=None):
+    def update(self, **kwargs: KwArgs):
         """
         Updates an existing customer record. Pass in keywords to change.
         """
-
-        # Check if user passed a customer_id; if so, retrieve the customer object
-        if isinstance(cust, str):
-            cust = self.get_customer_by_id(cust)
-
-        if name is not None:
-            self.title = name
-        if address is not None:
-            self.address = address
-        if address2 is not None:
-            self.address2 = address2
-        if city is not None:
-            self.city = city
-        if state is not None:
-            self.state = state
-        if zip is not None:
-            self.zip = zip
-        if country is not None:
-            self.country = country
-        if email is not None:
-            self.email = email
-        if phone is not None:
-            self.phone = phone
-        if additional_info is not None:
-            self.additionalInfo = additional_info
+        for k, v in kwargs.items():
+            if v is not None:
+                self.__setattr__(k, v)
 
         return self.tbapi.post2("/api/customer", self.json(by_alias=True), "Error updating customer")
+
+        # TODO: Move to Device.delete()
 
 class CustomerId(TbModel):
     customer_id: Id = Field(alias="customerId")
@@ -1022,7 +1010,7 @@ class Configuration(TbModel):
         return f"Configuration"
 
 
-class Dashboard(TbModel):
+class Dashboard(TbObject):
     id: Id
     created_time: datetime = Field(alias="createdTime")
     tenant_id: Id = Field(alias="tenantId")
@@ -1177,11 +1165,13 @@ print("d.id", d.id)
 pass
 
 
-c = Customer(**cust_json)
+c = Customer(tbapi, **cust_json)
 
 
 # debug(dash_def_json)
+dash_json["tbapi"] = tbapi
 dash = Dashboard.parse_obj(dash_json)
+dash_def_json["tbapi"] = tbapi
 dash_def = DashboardDef.parse_obj(dash_def_json)
 
 
