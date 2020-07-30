@@ -21,11 +21,18 @@ import json
 import requests
 import time
 from http import HTTPStatus
-from typing import  Optional, Dict, List, Any, Generic, TypeVar, Union, get_type_hints
+from typing import  Optional, Dict, List, Any, Generic, TypeVar, Union, get_type_hints, Type
 from datetime import datetime
 from pydantic import BaseModel, Field
 from devtools import debug
 from enum import Enum
+
+def check_enum(enum: Type[Enum], key: str) -> Any:
+    if key in enum.__members__:
+        return enum[key].value
+    if key in enum._value2member_map_:
+        return key
+    raise TypeError(f"Enum only accepts values defined in the {enum} class (got {key})")
 
 class TbApi:
 
@@ -284,18 +291,21 @@ class TbApi:
 
     def get_device_by_id(self, device_id):
         """
-        Returns named device object, or None if it can't be found
+        Returns an instantiated Device object
+        device_id can be either an Id object or a guid in the form of a string
         """
-        # TODO: Is None check needed?
-        if device_id is None:
-            return None
+        if isinstance(device_id, Id):
+            device_id = device_id.id
+
+        # otherwise, assume device_id is a guid
         try:
-            return self.get(f"/api/device/{device_id}", f"Could not retrieve device with id '{device_id}'")
+            json = self.get(f"/api/device/{device_id}", f"Could not retrieve device with id '{device_id}'")
+            return Device(self, **json)
+
         except requests.exceptions.HTTPError as ex:
             if ex.response.status_code == 404:
                 return None
-            else:
-                raise ex
+            raise
 
 
     def get_device_by_name(self, device_name):
@@ -304,9 +314,9 @@ class TbApi:
         """
         devices = self.get_devices_by_name(device_name)
 
-        # Fine exact match
+        # Find exact match
         for device in devices:
-            if device["name"] == device_name:
+            if device.name == device_name:
                 return device
 
         return None
@@ -316,12 +326,21 @@ class TbApi:
         """
         Returns a list of all devices starting with the specified name
         """
-        return self.get(f"/api/tenant/devices?limit=99999&textSearch={device_name_prefix}", f"Error fetching devices with name matching '{device_name_prefix}'")["data"]
+        json = self.get(f"/api/tenant/devices?limit=99999&textSearch={device_name_prefix}", f"Error fetching devices with name matching '{device_name_prefix}'")["data"]
+        
+        devices = []
+        for device in json:
+            devices.append(Device(self, **device))
+        return devices
 
 
     def get_all_devices(self):
-        return self.get("/api/tenant/devices?limit=99999", "Error fetching list of all devices")["data"]
-
+        json = self.get("/api/tenant/devices?limit=99999", "Error fetching list of all devices")["data"]
+        
+        devices = []
+        for device in json:
+            devices.append(Device(self, **device))
+        return devices
 
     # TODO: ???
     def add_asset(self, asset_name, asset_type, shared_attributes, server_attributes):
@@ -342,8 +361,8 @@ class TbApi:
         return asset
 
 
-    # TODO: Move to Device.new(tbapi,.....).save()?
-    def add_device(self, device_name: str, device_type: str, shared_attributes: Dict[str, Any], server_attributes: Dict[str, Any]): # -> Device:
+    # TODO: Move to Device.new(tbapi,.....).save()?  # or not
+    def add_device(self, device_name: str, device_type: str, shared_attributes: Optional[Dict[str, Any]] = None, server_attributes: Optional[Dict[str, Any]] = None): # -> Device: TODO: why won't python allow this??
         """
         Returns device object
         """
@@ -351,18 +370,15 @@ class TbApi:
             "name": device_name,
             "type": device_type,
         }
-
         device_json = self.post("/api/device", data, "Error adding device")
-        device = Device.parse_obj(device_json)
-        device.tbapi = self
-
-        device_id = device.id.id
+        
+        device = Device(self, **device_json)
 
         if server_attributes is not None:
-            self.set_server_attributes(device_id, server_attributes)
+            device.set_server_attributes(server_attributes)
 
         if shared_attributes is not None:
-            self.set_shared_attributes(device_id, shared_attributes)
+            device.set_shared_attributes(shared_attributes)
 
         return device
 
@@ -371,120 +387,119 @@ class TbApi:
         return self.get("/api/asset/types", "Error fetching list of all asset types")
 
 
-    # TODO: Move to Device.get_token()
-    def get_device_token(self, device):
-        """
-        Pass in a device or a device_id
-        """
-        device_id = self.get_id(device)
+    # # TODO: Move to Device.get_token()
+    # def get_device_token(self, device):
+    #     """
+    #     Pass in a device or a device_id
+    #     """
+    #     device_id = self.get_id(device)
 
-        json = self.get(f"/api/device/{device_id}/credentials", f"Error retreiving device_key for device '{device_id}'")
-        return json["credentialsId"]
-
-
-    # TODO: Move to Device.get_server_attributes()
-    # TODO: Pass enum values here instead of strings (see test code for example)
-    def get_server_attributes(self, device):
-        """
-        Pass in a device or a device_id
-        """
-        return self.get_attributes(device, "SERVER_SCOPE")
+    #     json = self.get(f"/api/device/{device_id}/credentials", f"Error retreiving device_key for device '{device_id}'")
+    #     return json["credentialsId"]
 
 
-    # TODO: Move to Device.get_shared_attributes()
-    def get_shared_attributes(self, device):
-        """
-        Pass in a device or a device_id
-        """
-        return self.get_attributes(device, "SHARED_SCOPE")
+    # # TODO: Move to Device.get_server_attributes()
+    # # TODO: Pass enum values here instead of strings (see test code for example)
+    # def get_server_attributes(self, device):
+    #     """
+    #     Pass in a device or a device_id
+    #     """
+    #     return self.get_attributes(device, "SERVER_SCOPE")
 
 
-    # TODO: Move to Device.get_client_attributes()
-    def get_client_attributes(self, device):
-        """
-        Pass in a device or a device_id
-        """
-        return self.get_attributes(device, "CLIENT_SCOPE")
+    # # TODO: Move to Device.get_shared_attributes()
+    # def get_shared_attributes(self, device):
+    #     """
+    #     Pass in a device or a device_id
+    #     """
+    #     return self.get_attributes(device, "SHARED_SCOPE")
 
 
-    # TODO: Move to Device.get_attributes(scope)
-    # TODO: Make scope a Device.Scope enum type  (Device.Scope.name is a pretty name, Device.Scope.value is something the server will consume)
-    def get_attributes(self, device, scope):
-        """
-        Pass in a device or a device_id
-        """
-        device_id = self.get_id(device)
-
-        return self.get(f"/api/plugins/telemetry/DEVICE/{device_id}/values/attributes/{scope}", f"Error retrieving {scope} attributes for '{device_id}'")
+    # # TODO: Move to Device.get_client_attributes()
+    # def get_client_attributes(self, device):
+    #     """
+    #     Pass in a device or a device_id
+    #     """
+    #     return self.get_attributes(device, "CLIENT_SCOPE")
 
 
-    # TODO: Move to Device.get_server_attributes()
-    def set_server_attributes(self, device, attributes):
-        """
-        Pass in a device or a device_id
-        attributes is a dict
-        """
-        return self.set_attributes(device, attributes, "SERVER_SCOPE")
+    # # TODO: Move to Device.get_attributes(scope)
+    # # TODO: Make scope a Device.Scope enum type  (Device.Scope.name is a pretty name, Device.Scope.value is something the server will consume)
+    # def get_attributes(self, device, scope):
+    #     """
+    #     Pass in a device or a device_id
+    #     """
+    #     device_id = self.get_id(device)
+
+    #     return self.get(f"/api/plugins/telemetry/DEVICE/{device_id}/values/attributes/{scope}", f"Error retrieving {scope} attributes for '{device_id}'")
 
 
-    # TODO: Move to Device.get_shared_attributes()
-    def set_shared_attributes(self, device, attributes):
-        """
-        Pass in a device or a device_id
-        """
-        return self.set_attributes(device, attributes, "SHARED_SCOPE")
+    # # TODO: Move to Device.get_server_attributes()
+    # def set_server_attributes(self, device, attributes):
+    #     """
+    #     Pass in a device or a device_id
+    #     attributes is a dict
+    #     """
+    #     return self.set_attributes(device, attributes, "SERVER_SCOPE")
 
 
-    # TODO: Move to Device.get_client_attributes()
-    def set_client_attributes(self, device, attributes):
-        """
-        Pass in a device or a device_id
-        """
-        return self.set_attributes(device, attributes, "CLIENT_SCOPE")
+    # # TODO: Move to Device.get_shared_attributes()
+    # def set_shared_attributes(self, device, attributes):
+    #     """
+    #     Pass in a device or a device_id
+    #     """
+    #     return self.set_attributes(device, attributes, "SHARED_SCOPE")
+
+
+    # # TODO: Move to Device.get_client_attributes()
+    # def set_client_attributes(self, device, attributes):
+    #     """
+    #     Pass in a device or a device_id
+    #     """
+    #     return self.set_attributes(device, attributes, "CLIENT_SCOPE")
 
 
     # TODO: Move to Device.set_attributes(attributes, scope)
-    def set_attributes(self, device, attributes, scope):
+    def set_attributes_old(self, device, attributes, scope):
         device_id = self.get_id(device)
-
         return self.post(f"/api/plugins/telemetry/DEVICE/{device_id}/{scope}", attributes, f"Error setting {scope} attributes for device '{device}'")
 
 
-    # TODO: Move to Device.delete_server_attributes(attributes)
-    def delete_server_attributes(self, device, attributes):
-        """
-        Pass in a device or a device_id
-        """
-        return self.delete_attributes(device, attributes, "SERVER_SCOPE")
+    # # TODO: Move to Device.delete_server_attributes(attributes)
+    # def delete_server_attributes(self, device, attributes):
+    #     """
+    #     Pass in a device or a device_id
+    #     """
+    #     return self.delete_attributes(device, attributes, "SERVER_SCOPE")
 
 
-    # TODO: Move to Device.delete_shared_attributes(attributes)
-    def delete_shared_attributes(self, device, attributes):
-        """
-        Pass in a device or a device_id
-        """
-        return self.delete_attributes(device, attributes, "SHARED_SCOPE")
+    # # TODO: Move to Device.delete_shared_attributes(attributes)
+    # def delete_shared_attributes(self, device, attributes):
+    #     """
+    #     Pass in a device or a device_id
+    #     """
+    #     return self.delete_attributes(device, attributes, "SHARED_SCOPE")
 
 
-    # TODO: Move to Device.delete_client_attributes(attributes)
-    def delete_client_attributes(self, device, attributes):
-        """
-        Pass in a device or a device_id
-        """
-        return self.delete_attributes(device, attributes, "CLIENT_SCOPE")
+    # # TODO: Move to Device.delete_client_attributes(attributes)
+    # def delete_client_attributes(self, device, attributes):
+    #     """
+    #     Pass in a device or a device_id
+    #     """
+    #     return self.delete_attributes(device, attributes, "CLIENT_SCOPE")
 
 
-    # TODO: Move to Device.delete_attributes(attributes, scope)
-    def delete_attributes(self, device, attributes, scope):
-        """
-        Pass an attribute name or a list of attributes
-        """
-        device_id = self.get_id(device)
+    # # TODO: Move to Device.delete_attributes(attributes, scope)
+    # def delete_attributes(self, device, attributes, scope):
+    #     """
+    #     Pass an attribute name or a list of attributes
+    #     """
+    #     device_id = self.get_id(device)
 
-        if type(attributes) is list or type(attributes) is tuple:
-            attributes = ",".join(attributes)
+    #     if type(attributes) is list or type(attributes) is tuple:
+    #         attributes = ",".join(attributes)
 
-        return self.delete(f"/api/plugins/telemetry/DEVICE/{device_id}/{scope}?keys={attributes}", f"Error deleting {scope} attributes for device '{device}'")
+    #     return self.delete(f"/api/plugins/telemetry/DEVICE/{device_id}/{scope}?keys={attributes}", f"Error deleting {scope} attributes for device '{device}'")
 
 
     # TODO: ???
@@ -494,77 +509,77 @@ class TbApi:
         return self.post(f"/api/plugins/telemetry/ASSET/{asset_id}/timeseries/{scope}", data, f"Error sending telemetry for asset with id '{asset_id}'")
 
 
-    # TODO: Move to Device.send_telemetry(data, timestamp)
-    def send_telemetry(self, device_token, data, timestamp=None):
-        """
-        Note that this requires the device's secret token, not the device_id!
-        """
-        if timestamp is not None:
-            data = {"ts": timestamp, "values": data}
-        return self.post(f"/api/v1/{device_token}/telemetry", data, f"Error sending telemetry for device with token '{device_token}'")
+    # # TODO: Move to Device.send_telemetry(data, timestamp)
+    # def send_telemetry(self, device_token, data, timestamp=None):
+    #     """
+    #     Note that this requires the device's secret token, not the device_id!
+    #     """
+    #     if timestamp is not None:
+    #         data = {"ts": timestamp, "values": data}
+    #     return self.post(f"/api/v1/{device_token}/telemetry", data, f"Error sending telemetry for device with token '{device_token}'")
 
 
-    # TODO: Move to Device.get_telementry_keys()
-    def get_telemetry_keys(self, device):
-        device_id = self.get_id(device)
+    # # TODO: Move to Device.get_telementry_keys()
+    # def get_telemetry_keys(self, device):
+    #     device_id = self.get_id(device)
 
-        return self.get(f"/api/plugins/telemetry/DEVICE/{device_id}/keys/timeseries", f"Error retrieving telemetry keys for device '{device_id}'")
-
-
-    # TODO: Move to Device.get_latest_telemetry(telemetry_keys)
-    def get_latest_telemetry(self, device, telemetry_keys):
-        """
-        Pass a single key, a stringified comma-separate list, a list object, or a tuple
-        """
-        device_id = self.get_id(device)
-
-        if isinstance(telemetry_keys, str):
-            keys = telemetry_keys
-        else:
-            keys = ",".join(telemetry_keys)
-
-        return self.get(f"/api/plugins/telemetry/DEVICE/{device_id}/values/timeseries?keys={keys}", f"Error retrieving latest telemetry for device '{device_id}' with keys '{keys}'")
+    #     return self.get(f"/api/plugins/telemetry/DEVICE/{device_id}/keys/timeseries", f"Error retrieving telemetry keys for device '{device_id}'")
 
 
-    # TODO: Move to Device.get_telemetry(...)
-    def get_telemetry(self, device, telemetry_keys, startTime=None, endTime=None, interval=None, limit=None, agg=None):
-        """
-        Pass a single key, a stringified comma-separate list, a list object, or a tuple
-        """
-        device_id = self.get_id(device)
+    # # TODO: Move to Device.get_latest_telemetry(telemetry_keys)
+    # def get_latest_telemetry(self, device, telemetry_keys):
+    #     """
+    #     Pass a single key, a stringified comma-separate list, a list object, or a tuple
+    #     """
+    #     device_id = self.get_id(device)
 
-        if isinstance(telemetry_keys, str):
-            keys = telemetry_keys
-        else:
-            keys = ",".join(telemetry_keys)
+    #     if isinstance(telemetry_keys, str):
+    #         keys = telemetry_keys
+    #     else:
+    #         keys = ",".join(telemetry_keys)
 
-        if startTime is None:
-            startTime = 0
-
-        if endTime is None:
-            endTime = int(time.time() * 1000)       # Unix timestamp, now, convert to milliseconds
-
-        if interval is None:
-            interval = 60 * 1000   # 1 minute, in ms
-
-        if limit is None:
-            limit = 100
-
-        if agg is None:
-            agg = "NONE"   # MIN, MAX, AVG, SUM, COUNT, NONE
-
-        params = "/api/plugins/telemetry/DEVICE/" + device_id + "/values/timeseries?keys=" + keys + "&startTs=" + \
-            str(int(startTime)) + "&endTs=" + str(int(endTime)) + "&interval=" + str(interval) + "&limit=" + str(limit) + "&agg=" + agg
-        error_message = "Error retrieving telemetry for device '" + device_id + "' with date range '" + str(int(startTime)) + "-" + str(int(endTime)) + "' and keys '" + keys + "'"
-
-        return self.get(params, error_message)
+    #     return self.get(f"/api/plugins/telemetry/DEVICE/{device_id}/values/timeseries?keys={keys}", f"Error retrieving latest telemetry for device '{device_id}' with keys '{keys}'")
 
 
-    # TODO: Move to Device.delete_telemetry(key, timestamp)
-    def delete_telemetry(self, device, key, timestamp):
-        device_id = self.get_id(device)
+    # # TODO: Move to Device.get_telemetry(...)
+    # def get_telemetry(self, device, telemetry_keys, startTime=None, endTime=None, interval=None, limit=None, agg=None):
+    #     """
+    #     Pass a single key, a stringified comma-separate list, a list object, or a tuple
+    #     """
+    #     device_id = self.get_id(device)
 
-        return self.delete(f"/api/plugins/telemetry/DEVICE/{device_id}/timeseries/values?key={key}&ts={str(int(timestamp))}", f"Error deleting telemetry for device '{device_id}'")
+    #     if isinstance(telemetry_keys, str):
+    #         keys = telemetry_keys
+    #     else:
+    #         keys = ",".join(telemetry_keys)
+
+    #     if startTime is None:
+    #         startTime = 0
+
+    #     if endTime is None:
+    #         endTime = int(time.time() * 1000)       # Unix timestamp, now, convert to milliseconds
+
+    #     if interval is None:
+    #         interval = 60 * 1000   # 1 minute, in ms
+
+    #     if limit is None:
+    #         limit = 100
+
+    #     if agg is None:
+    #         agg = "NONE"   # MIN, MAX, AVG, SUM, COUNT, NONE
+
+    #     params = "/api/plugins/telemetry/DEVICE/" + device_id + "/values/timeseries?keys=" + keys + "&startTs=" + \
+    #         str(int(startTime)) + "&endTs=" + str(int(endTime)) + "&interval=" + str(interval) + "&limit=" + str(limit) + "&agg=" + agg
+    #     error_message = "Error retrieving telemetry for device '" + device_id + "' with date range '" + str(int(startTime)) + "-" + str(int(endTime)) + "' and keys '" + keys + "'"
+
+    #     return self.get(params, error_message)
+
+
+    # # TODO: Move to Device.delete_telemetry(key, timestamp)
+    # def delete_telemetry(self, device, key, timestamp):
+    #     device_id = self.get_id(device)
+
+    #     return self.delete(f"/api/plugins/telemetry/DEVICE/{device_id}/timeseries/values?key={key}&ts={str(int(timestamp))}", f"Error deleting telemetry for device '{device_id}'")
 
 
     # # TODO: Move to Device.is_public()
@@ -712,6 +727,7 @@ class TbApi:
 
 
     def post2(self, params: str, json: Optional[str], msg: str):
+        return self.post(params, json, msg)
         """
         """
         url = self.mothership_url + params
@@ -729,7 +745,7 @@ class TbApi:
         if response.text is None or response.text == "":
             return {}
 
-        return response.json()
+        return response.json()  
 
 
     @staticmethod
@@ -737,8 +753,18 @@ class TbApi:
         try:
             response.raise_for_status()
         except requests.exceptions.RequestException as ex:
-            ex.args += (f"RESPONSE BODY: {response.content.decode('utf8')}",)        # Append our response to the exception to make it easier to figure out WTF went wrong
+            ex.args += (f"RESPONSE BODY: {response.content.decode('utf8')}",)        # Append our response to the exception to make it easier to figure out what went wrong
             raise
+
+        except requests.exceptions.HTTPError as ex:
+            # if ex.response.status_code == 404:
+            #     return None
+            # else:
+            #     raise ex
+            # if "Invalid UUID string:" in ex.http_error_msg:
+            #     return None
+            return None
+
 
 class TbModel(BaseModel):
     class Config:
@@ -767,15 +793,22 @@ class Id(TbModel):
 
 
 class Device(TbObject):
-    # class DeviceModel(TbModel):
     id: Id
-    additional_info: Optional[str] = Field(alias="additionalInfo")
+    additional_info: Optional[dict] = Field(alias="additionalInfo")
     tenant_id: Id = Field(alias="tenantId")
     customer_id: Id = Field(alias="customerId")
     name: Optional[str]
     type: Optional[str]
     label: Optional[str]
     created_time: datetime = Field(alias="createdTime")
+    
+    __slots__ = ["device_token"]
+    # device_token: str # = None     # call self.get_token() to retrieve and cache the device token from the server
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        object.__setattr__(self, "device_token", None)
+        pass
 
     class Scope(Enum):
         Server = "SERVER_SCOPE"
@@ -786,24 +819,193 @@ class Device(TbObject):
         """
         Returns True if device was deleted, False if it did not exist
         """
-        return tbapi.delete(f"/api/device/{self.id.id}", f"Error deleting device '{self.id.id}'")
+        return self.tbapi.delete(f"/api/device/{self.id.id}", f"Error deleting device '{self.id.id}'")
 
     def get_customer(self):
+        """
+        Returns the id of the customer assigned to the device
+        """
         return self.customer_id.id
 
     def assign_to_public_user(self):
         """
         Pass in a device or a device_id
         """
-        return tbapi.post2(f"/api/customer/public/device/{self.id.id}", None, f"Error assigning device '{self.id.id}' to public customer")
+        return self.tbapi.post2(f"/api/customer/public/device/{self.id.id}", None, f"Error assigning device '{self.id.id}' to public customer")
 
-    # TODO: Move to Device.is_public()
     def is_public(self):
         """
         Return True if device is owned by the public user, False otherwise
         """
-        pub_id = tbapi.get_public_user_id()
+        pub_id = self.tbapi.get_public_user_id()
         return self.customer_id.id == pub_id
+
+    # not suppported
+    # def delete_telemetry(self, key, timestamp):
+    #     return self.tbapi.delete(f"/api/plugins/telemetry/DEVICE/{self.id.id}/timeseries/values?key={key}&ts={str(int(timestamp))}", f"Error deleting telemetry for device '{self.id.id}'")
+
+    def get_telemetry(self, telemetry_keys, startTime=None, endTime=None, interval=None, limit=None, agg=None):
+        """
+        Pass a single key, a stringified comma-separate list, a list object, or a tuple
+        """
+        if isinstance(telemetry_keys, str):
+            keys = telemetry_keys
+        else:
+            keys = ",".join(telemetry_keys)
+
+        if startTime is None:
+            startTime = 0
+
+        if endTime is None:
+            endTime = int(time.time() * 1000)       # Unix timestamp, now, convert to milliseconds
+
+        if interval is None:
+            interval = 60 * 1000   # 1 minute, in ms
+
+        if limit is None:
+            limit = 100
+
+        if agg is None:
+            agg = "NONE"   # MIN, MAX, AVG, SUM, COUNT, NONE
+
+        params = "/api/plugins/telemetry/DEVICE/" + self.id.id + "/values/timeseries?keys=" + keys + "&startTs=" + \
+            str(int(startTime)) + "&endTs=" + str(int(endTime)) + "&interval=" + str(interval) + "&limit=" + str(limit) + "&agg=" + agg
+            
+        error_message = "Error retrieving telemetry for device '" + self.id.id + "' with date range '" + str(int(startTime)) + "-" + str(int(endTime)) + "' and keys '" + keys + "'"
+        
+        return self.tbapi.get(params, error_message)
+
+    def send_telemetry(self, device_token, data, timestamp=None):
+        """
+        Note that this requires the device's secret token as the first argument
+        """
+        device_token = self.get_token()
+        
+        if timestamp is not None:
+            formatted_data = {"ts": timestamp, "values": data}
+
+        return self.tbapi.post2(f"/api/v1/{device_token}/telemetry", formatted_data, f"Error sending telemetry for device with token '{device_token}'")
+
+    def get_telemetry_keys(self):
+        return self.tbapi.get(f"/api/plugins/telemetry/DEVICE/{self.id.id}/keys/timeseries", f"Error retrieving telemetry keys for device '{self.id.id}'")
+
+    def get_latest_telemetry(self, telemetry_keys):
+        """
+        Pass a single key, a stringified comma-separate list, a list object, or a tuple
+        """
+        if isinstance(telemetry_keys, str):
+            keys = telemetry_keys
+        else:
+            keys = ",".join(telemetry_keys)
+
+        return self.tbapi.get(f"/api/plugins/telemetry/DEVICE/{self.id.id}/values/timeseries?keys={keys}", f"Error retrieving latest telemetry for device '{self.id.id}' with keys '{keys}'")
+
+    def get_token(self) -> str:
+        """
+        Returns the device's secret token from the server and caches it
+        """
+        if self.device_token is None:
+            json = self.tbapi.get(f"/api/device/{self.id.id}/credentials", f"Error retreiving device_key for device '{self.id.id}'")
+            object.__setattr__(self, "device_token", json["credentialsId"])
+            # self.device_token = json["credentialsId"]
+        return self.device_token
+
+    # getting attributes from the server
+    def get_server_attributes(self):
+        """
+        Returns a list of the device's attributes in a the Server scope.
+        """
+        return self.get_attributes("Server")
+
+    def get_shared_attributes(self):
+        """
+        Returns a list of the device's attributes in a the Shared scope.
+        """
+        return self.get_attributes("Shared")
+
+    def get_client_attributes(self):
+        """
+        Returns a list of the device's attributes in a the Client scope.
+        """
+        return self.get_attributes("Client")
+
+    def get_attributes(self, scope: str):
+        """
+        Returns a list of the device's attributes in the specified scope.
+        """
+        # if scope in list(self.Scope.__members__):
+        #     scope = self.Scope[scope].value
+        # elif scope not in self.Scope._value2member_map_:
+        #     raise TypeError(f"Scope must be one of the strings enumerated in Device.Scope (got {scope})")
+        scope = check_enum(self.Scope, scope)
+
+        x = self.tbapi.get(f"/api/plugins/telemetry/DEVICE/{self.id.id}/values/attributes/{scope}", f"Error retrieving {scope} attributes for '{self.id.id}'")
+        return x    # for debugging purposes
+
+    # setting attributes to the server
+    def set_server_attributes(self, attributes: Dict[str, Any]):
+        """
+        Posts the attributes provided (use dict format) to the server in the Server scope
+        """
+        return self.set_attributes(attributes, "Server")
+
+    def set_shared_attributes(self, attributes: Dict[str, Any]):
+        """
+        Posts the attributes provided (use dict format) to the server in the Shared scope
+        """
+        return self.set_attributes(attributes, "Shared")
+
+    def set_client_attributes(self, attributes: Dict[str, Any]):
+        """
+        Posts the attributes provided (use dict format) to the server in the Client scope
+        """
+        return self.set_attributes(attributes, "Client")
+
+    def set_attributes(self, attributes: Dict[str, Any], scope: str):
+        """
+        Posts the attributes provided (use dict format) to the server at a specified scope
+        """
+        scope = check_enum(self.Scope, scope)
+
+        return self.tbapi.post(f"/api/plugins/telemetry/DEVICE/{self.id.id}/{scope}", attributes, f"Error setting {scope} attributes for device '{self.id.id}'")
+
+
+    def set_attributes_old(self, device, attributes, scope):
+        device_id = self.get_id(device)
+        return self.post(f"/api/plugins/telemetry/DEVICE/{device_id}/{scope}", attributes, f"Error setting {scope} attributes for device '{device}'")
+
+
+
+
+    # deleting attributes from the server
+    def delete_server_attributes(self, attributes: Dict[str, Any]):
+        """
+        Pass an attribute name or a list of attributes to be deleted from the specified scope
+        """
+        return self.delete_attributes(attributes, "Server")
+
+    def delete_shared_attributes(self, attributes: Dict[str, Any]):
+        """
+        Pass an attribute name or a list of attributes to be deleted from the specified scope
+        """
+        return self.delete_attributes(attributes, "Shared")
+
+    def delete_client_attributes(self, attributes: Dict[str, Any]):
+        """
+        Pass an attribute name or a list of attributes to be deleted from the specified scope
+        """
+        return self.delete_attributes(attributes, "Client")
+
+    def delete_attributes(self, attributes: Dict[str, Any], scope: str):
+        """
+        Pass an attribute name or a list of attributes to be deleted from the specified scope
+        """
+        scope = check_enum(self.Scope, scope)
+
+        if type(attributes) is list or type(attributes) is tuple:
+            attributes = ",".join(attributes)
+
+        return self.tbapi.delete(f"/api/plugins/telemetry/DEVICE/{self.id.id}/{scope}?keys={attributes}", f"Error deleting {scope} attributes for device '{self.id.id}'")
 
 
 class Customer(TbObject):
@@ -1077,7 +1279,7 @@ from config import mothership_url, thingsboard_username, thingsboard_password
 print("Loading data...", end=None)
 tbapi = TbApi(mothership_url, thingsboard_username, thingsboard_password)
 
-dev_json = tbapi.get_device_by_name("Birdhouse 001")
+device = tbapi.get_device_by_name("Birdhouse 001")
 cust_json = tbapi.get_customer("Birdhouse 001")
 dash_json = tbapi.get_dashboard_by_name("Birdhouse 001 Dash")
 dash_def_json = tbapi.get_dashboard_definition("0d538a70-d996-11e7-a394-bf47d8c29be7")
@@ -1085,73 +1287,164 @@ dash_def_json = tbapi.get_dashboard_definition("0d538a70-d996-11e7-a394-bf47d8c2
 
 
 # TODO: Make these work:
-# assert isinstance(tbapi.get_device_by_id(device.id.id), Device)     # Retrieve a device by its guid
-# assert isinstance(tbapi.get_device_by_id(device.id), Device)        # Retrieve a device by an Id object
-# assert tbapi.get_device_by_id("not_really_a_guid") is None          # Non-esistent guid returns None
+assert isinstance(tbapi.get_device_by_id(device.id.id), Device)     # Retrieve a device by its guid
+assert isinstance(tbapi.get_device_by_id(device.id), Device)        # Retrieve a device by an Id object
+# assert tbapi.get_device_by_id("f0ce0fd2-d051-11ea-b44a-83775d743133") is None          # Non-existent guid returns None
 # assert tbapi.get_device_by_id(None) is None                         # None returns None
 
-# assert tbapi.get_device_by_name("Does Not Exist") is None
+assert tbapi.get_device_by_name("Does Not Exist") is None
 
-# devices = tbapi.get_devices_by_name("Birdhouse 0")
-# assert len(devices) > 1
-# assert isinstance(devices[0], Device)
+devices = tbapi.get_devices_by_name("Birdhouse 0")
+assert len(devices) > 1
+assert isinstance(devices[0], Device)
 
-# devices = tbapi.get_devices_by_name("Does Not Exist")
-# assert len(devices) == 0
+devices = tbapi.get_devices_by_name("Does Not Exist")
+assert len(devices) == 0
 
-# devices = tbapi.get_all_devices()
-# assert len(devices) > 1
-# assert isinstance(devices[0], Device)
+devices = tbapi.get_all_devices()
+assert len(devices) > 1
+assert isinstance(devices[0], Device)
 
-# device = tbapi.get_device_by_name("Birdhouse 001")
-# assert isinstance(device, Device)
-# assert isinstance(device.id, Id)
-# token = Device.get_token()
-# assert isinstance(token, str)
-# assert len(token) == 20 # TODO: Verify right number here if it's not 20
+device = tbapi.get_device_by_name("Birdhouse 001")
+assert isinstance(device, Device)
+assert isinstance(device.id, Id)
+token = device.get_token()
+assert isinstance(token, str)
+assert len(token) == 20 # TODO: Verify right number here if it's not 20
 
-# # Make sure these calls produce equivalent results
-# attrs1 = Device.get_server_attributes()
-# attrs2 = Device.get_attributes(Device.Scope.Server)
-# assert attrs1 == attrs2
-# assert len(attrs1) > 0
+# Make sure these calls produce equivalent results
+attrs1 = device.get_server_attributes()
+attrs2 = device.get_attributes("Server")
+assert attrs1 == attrs2
+assert len(attrs1) > 0
 
-# attrs1 = Device.get_shared_attributes()
-# attrs2 = Device.get_attributes(Device.Scope.Shared)
-# assert attrs1 == attrs2
-# assert len(attrs1) > 0
+attrs1 = device.get_shared_attributes()
+attrs2 = device.get_attributes("Shared")
+assert attrs1 == attrs2
+assert len(attrs1) > 0
 
-# attrs1 = Device.get_client_attributes()
-# attrs2 = Device.get_attributes(Device.Scope.Client)
-# assert attrs1 == attrs2
-# assert len(attrs1) > 0
+attrs1 = device.get_client_attributes()
+attrs2 = device.get_attributes("Client")
+assert attrs1 == attrs2
+assert len(attrs1) > 0
 
-# # Set/retrieve/delete attributes
-# def test_attributes(device: Device, scope: Device.Scope):
-#     key = "test_delete_me"
-#     val = 12345
+# Set/retrieve/delete attributes
+def test_attributes(device: Device, scope: str):
+    key = "test_delete_me"
+    val = 12345
 
-#     # Verify key doesn't exist
-#     attrs = Device.get_attributes(scope)
-#     assert attrs.get(key) is None
+    # Verify key doesn't exist
+    attrs = device.get_attributes(scope)
+    assert key not in attrs # attrs.get(key) is None
 
-#     # Set
-#     device.set_attributes({key: val}, scope)
-#     attrs = Device.get_attributes(scope)
-#     attrs = Device.get_attributes(scope)
-#     assert attrs.get(key) == 12345
+    # Set
+    device.set_attributes({key: val}, scope)
+    attrs = device.get_attributes(scope)
 
-#     # Cleanup
-#     device.delete_attributes([key])
-#     attrs = Device.get_attributes(scope)
-#     assert attrs.get(key) is None
+    found = False
+    for attr in attrs:
+        if attr["key"] == key:
+            assert attr["value"] == val
+            found = True
+    assert found
 
-# test_attributes(device, Device.Scope.Server)
-# test_attributes(device, Device.Scope.Shared)
-# test_attributes(device, Device.Scope.Client)
+    # Cleanup
+    found = False
+    device.delete_attributes([key], scope)
+    attrs = device.get_attributes(scope)
+    for attr in attrs:
+        if attr["key"] == key:
+            assert attr["value"] == None
+            found = True
+    assert found == False
+
+test_attributes(device, "Server")
+test_attributes(device, "Shared")
+# test_attributes(device, "Client") # TODO: should setting and getting in the Client scope work?
 
 
 print(" done.")
+
+# create a new device
+device = tbapi.add_device("Device Test Subject", "Guinea Pig", shared_attributes={"my_shared_attribute_1": 111}, server_attributes={"my_server_attribute_2": 222})
+
+assert(isinstance(device.get_customer(), str)) # should be a guid
+token = device.get_token()
+assert(len(token) == 20) # maybe?
+
+keys = ["datum_1", "datum_2"]
+values = [555, 666]
+timestamps = [1595897301 * 1000, 1595897302 * 1000] # second timestamp must be greater than first for check to work
+
+
+expected_tel_keys = []
+tel_keys = device.get_telemetry_keys()
+assert(tel_keys == expected_tel_keys)
+
+expected_telemetry = {}
+expected_latest_telemetry = {}
+def test_sending_telemetry(device: Device, token: str, data_index: int, timestamp_index: int):
+    device.send_telemetry(token, {keys[data_index]: values[data_index]}, timestamp=timestamps[timestamp_index])
+    if keys[data_index] not in expected_tel_keys:
+        expected_tel_keys.append(keys[data_index])
+    tel_keys = device.get_telemetry_keys()
+    assert(tel_keys == expected_tel_keys)
+
+    if keys[data_index] not in expected_telemetry.keys():
+        expected_telemetry[keys[data_index]]  = [{"ts": timestamps[timestamp_index], "value": str(values[data_index])}]
+    else:
+        expected_telemetry[keys[data_index]].insert(0, {"ts": timestamps[timestamp_index], "value": str(values[data_index])})
+        # expected_telemetry[keys[data_index]] += [{"ts": timestamps[timestamp_index], "value": str(values[data_index])}]
+    telemetry = device.get_telemetry(tel_keys)
+    assert(telemetry == expected_telemetry)
+
+    expected_latest_telemetry[keys[data_index]] = [{"ts": timestamps[timestamp_index], "value": str(values[data_index])}]
+    latest_telemetry = device.get_latest_telemetry(tel_keys)
+    assert(latest_telemetry == expected_latest_telemetry)
+
+test_sending_telemetry(device, token, 0, 0)
+test_sending_telemetry(device, token, 1, 1)
+test_sending_telemetry(device, token, 0, 1)
+
+
+# for tel_key in tel_keys:
+#     for timestamp in timestamps:
+#         device.delete_telemetry(tel_key, timestamp)
+# telemetry = device.get_telemetry(tel_keys)
+# assert(telemetry == {})
+
+
+new_attributes = {"my_new_attribute_3": 333, "my_new_attribute_4": 444}
+expected_attributes_for_shared_scope = {"my_shared_attribute_1": 111, **new_attributes}
+expected_attributes_for_server_scope = {"my_server_attribute_2": 222, **new_attributes}
+
+device.set_server_attributes(new_attributes)
+device.set_shared_attributes(new_attributes)
+assert(device.get_server_attributes() == expected_attributes_for_shared_scope)
+assert(device.get_shared_attributes() == expected_attributes_for_server_scope)
+device.delete_server_attributes(*(expected_attributes_for_server_scope.values()))
+device.delete_shared_attributes(*(expected_attributes_for_shared_scope.values()))
+assert(device.get_server_attributes() == None)
+assert(device.get_shared_attributes() == None)
+
+
+
+device.set_attributes(new_attributes, "Shared")
+device.set_attributes(new_attributes, "Server")
+assert(device.get_attributes("Shared") == expected_attributes_for_shared_scope)
+assert(device.get_attributes("Server") == expected_attributes_for_server_scope)
+device.delete_attributes(new_attributes, "Shared")
+device.delete_attributes(new_attributes, "Server")
+assert(device.get_server_attributes() == None)
+assert(device.get_shared_attributes() == None)
+
+device.assign_to_public_user()
+assert(device.is_public())
+
+device.delete()
+
+
+
 
 id = Id(id="12345", entity_type="TEST")
 
