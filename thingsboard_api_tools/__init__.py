@@ -387,7 +387,6 @@ class TbApi:
         return self.get("/api/asset/types", "Error fetching list of all asset types")
 
 
-    # # TODO: Move to Device.get_token()
     # def get_device_token(self, device):
     #     """
     #     Pass in a device or a device_id
@@ -398,8 +397,6 @@ class TbApi:
     #     return json["credentialsId"]
 
 
-    # # TODO: Move to Device.get_server_attributes()
-    # # TODO: Pass enum values here instead of strings (see test code for example)
     # def get_server_attributes(self, device):
     #     """
     #     Pass in a device or a device_id
@@ -407,7 +404,6 @@ class TbApi:
     #     return self.get_attributes(device, "SERVER_SCOPE")
 
 
-    # # TODO: Move to Device.get_shared_attributes()
     # def get_shared_attributes(self, device):
     #     """
     #     Pass in a device or a device_id
@@ -415,7 +411,6 @@ class TbApi:
     #     return self.get_attributes(device, "SHARED_SCOPE")
 
 
-    # # TODO: Move to Device.get_client_attributes()
     # def get_client_attributes(self, device):
     #     """
     #     Pass in a device or a device_id
@@ -423,8 +418,6 @@ class TbApi:
     #     return self.get_attributes(device, "CLIENT_SCOPE")
 
 
-    # # TODO: Move to Device.get_attributes(scope)
-    # # TODO: Make scope a Device.Scope enum type  (Device.Scope.name is a pretty name, Device.Scope.value is something the server will consume)
     # def get_attributes(self, device, scope):
     #     """
     #     Pass in a device or a device_id
@@ -434,7 +427,6 @@ class TbApi:
     #     return self.get(f"/api/plugins/telemetry/DEVICE/{device_id}/values/attributes/{scope}", f"Error retrieving {scope} attributes for '{device_id}'")
 
 
-    # # TODO: Move to Device.get_server_attributes()
     # def set_server_attributes(self, device, attributes):
     #     """
     #     Pass in a device or a device_id
@@ -443,7 +435,6 @@ class TbApi:
     #     return self.set_attributes(device, attributes, "SERVER_SCOPE")
 
 
-    # # TODO: Move to Device.get_shared_attributes()
     # def set_shared_attributes(self, device, attributes):
     #     """
     #     Pass in a device or a device_id
@@ -451,7 +442,6 @@ class TbApi:
     #     return self.set_attributes(device, attributes, "SHARED_SCOPE")
 
 
-    # # TODO: Move to Device.get_client_attributes()
     # def set_client_attributes(self, device, attributes):
     #     """
     #     Pass in a device or a device_id
@@ -459,13 +449,11 @@ class TbApi:
     #     return self.set_attributes(device, attributes, "CLIENT_SCOPE")
 
 
-    # TODO: Move to Device.set_attributes(attributes, scope)
     def set_attributes_old(self, device, attributes, scope):
         device_id = self.get_id(device)
         return self.post(f"/api/plugins/telemetry/DEVICE/{device_id}/{scope}", attributes, f"Error setting {scope} attributes for device '{device}'")
 
 
-    # # TODO: Move to Device.delete_server_attributes(attributes)
     # def delete_server_attributes(self, device, attributes):
     #     """
     #     Pass in a device or a device_id
@@ -473,7 +461,6 @@ class TbApi:
     #     return self.delete_attributes(device, attributes, "SERVER_SCOPE")
 
 
-    # # TODO: Move to Device.delete_shared_attributes(attributes)
     # def delete_shared_attributes(self, device, attributes):
     #     """
     #     Pass in a device or a device_id
@@ -481,7 +468,6 @@ class TbApi:
     #     return self.delete_attributes(device, attributes, "SHARED_SCOPE")
 
 
-    # # TODO: Move to Device.delete_client_attributes(attributes)
     # def delete_client_attributes(self, device, attributes):
     #     """
     #     Pass in a device or a device_id
@@ -489,7 +475,6 @@ class TbApi:
     #     return self.delete_attributes(device, attributes, "CLIENT_SCOPE")
 
 
-    # # TODO: Move to Device.delete_attributes(attributes, scope)
     # def delete_attributes(self, device, attributes, scope):
     #     """
     #     Pass an attribute name or a list of attributes
@@ -509,7 +494,6 @@ class TbApi:
         return self.post(f"/api/plugins/telemetry/ASSET/{asset_id}/timeseries/{scope}", data, f"Error sending telemetry for asset with id '{asset_id}'")
 
 
-    # # TODO: Move to Device.send_telemetry(data, timestamp)
     # def send_telemetry(self, device_token, data, timestamp=None):
     #     """
     #     Note that this requires the device's secret token, not the device_id!
@@ -519,14 +503,12 @@ class TbApi:
     #     return self.post(f"/api/v1/{device_token}/telemetry", data, f"Error sending telemetry for device with token '{device_token}'")
 
 
-    # # TODO: Move to Device.get_telementry_keys()
     # def get_telemetry_keys(self, device):
     #     device_id = self.get_id(device)
 
     #     return self.get(f"/api/plugins/telemetry/DEVICE/{device_id}/keys/timeseries", f"Error retrieving telemetry keys for device '{device_id}'")
 
 
-    # # TODO: Move to Device.get_latest_telemetry(telemetry_keys)
     # def get_latest_telemetry(self, device, telemetry_keys):
     #     """
     #     Pass a single key, a stringified comma-separate list, a list object, or a tuple
@@ -541,7 +523,6 @@ class TbApi:
     #     return self.get(f"/api/plugins/telemetry/DEVICE/{device_id}/values/timeseries?keys={keys}", f"Error retrieving latest telemetry for device '{device_id}' with keys '{keys}'")
 
 
-    # # TODO: Move to Device.get_telemetry(...)
     # def get_telemetry(self, device, telemetry_keys, startTime=None, endTime=None, interval=None, limit=None, agg=None):
     #     """
     #     Pass a single key, a stringified comma-separate list, a list object, or a tuple
@@ -575,14 +556,12 @@ class TbApi:
     #     return self.get(params, error_message)
 
 
-    # # TODO: Move to Device.delete_telemetry(key, timestamp)
     # def delete_telemetry(self, device, key, timestamp):
     #     device_id = self.get_id(device)
 
     #     return self.delete(f"/api/plugins/telemetry/DEVICE/{device_id}/timeseries/values?key={key}&ts={str(int(timestamp))}", f"Error deleting telemetry for device '{device_id}'")
 
 
-    # # TODO: Move to Device.is_public()
     # def is_public_device(self, device):
     #     """
     #     Return True if device is owned by the public user, False otherwise
@@ -618,13 +597,11 @@ class TbApi:
         raise ValueError(f"Could not resolve id for {obj}")
 
 
-    # # TODO: Move to Device.get_customer()
     # @staticmethod
     # def get_customer_from_device(device):
     #     return device["customerId"]["id"]
 
 
-    # # TODO: Move to Device.assign_to_public_user()
     # def assign_device_to_public_user(self, device):
     #     """
     #     Pass in a device or a device_id
@@ -829,9 +806,13 @@ class Device(TbObject):
 
     def assign_to_public_user(self):
         """
-        Pass in a device or a device_id
+        Returns a new device that is assigned to the public customer. Use device = device.assign_to_public_user()
         """
-        return self.tbapi.post2(f"/api/customer/public/device/{self.id.id}", None, f"Error assigning device '{self.id.id}' to public customer")
+        # same functionality as:
+        # self.customer_id.id = self.tbapi.get_public_user_id()
+        # return
+
+        return Device(self.tbapi, **self.tbapi.post2(f"/api/customer/public/device/{self.id.id}", None, f"Error assigning device '{self.id.id}' to public customer"))
 
     def is_public(self):
         """
@@ -1067,7 +1048,6 @@ class Customer(TbObject):
 
         return self.tbapi.post2("/api/customer", self.json(by_alias=True), "Error updating customer")
 
-        # TODO: Move to Device.delete()
 
 class CustomerId(TbModel):
     customer_id: Id = Field(alias="customerId")
@@ -1363,13 +1343,16 @@ test_attributes(device, "Shared")
 # test_attributes(device, "Client") # TODO: should setting and getting in the Client scope work?
 
 
-print(" done.")
+print(" done with first round of tests.")
 
 # create a new device
-device = tbapi.add_device("Device Test Subject", "Guinea Pig", shared_attributes={"my_shared_attribute_1": 111}, server_attributes={"my_server_attribute_2": 222})
+shared_attributes = {"my_shared_attribute_1": 111}
+server_attributes = {"my_server_attribute_2": 222}
+device = tbapi.add_device("Device Test Subject", "Guinea Pig", shared_attributes=shared_attributes, server_attributes=server_attributes)
 
 assert(isinstance(device.get_customer(), str)) # should be a guid
 token = device.get_token()
+assert(isinstance(token, str))
 assert(len(token) == 20) # maybe?
 
 keys = ["datum_1", "datum_2"]
@@ -1383,6 +1366,7 @@ assert(tel_keys == expected_tel_keys)
 
 expected_telemetry = {}
 expected_latest_telemetry = {}
+
 def test_sending_telemetry(device: Device, token: str, data_index: int, timestamp_index: int):
     device.send_telemetry(token, {keys[data_index]: values[data_index]}, timestamp=timestamps[timestamp_index])
     if keys[data_index] not in expected_tel_keys:
@@ -1403,7 +1387,7 @@ def test_sending_telemetry(device: Device, token: str, data_index: int, timestam
     assert(latest_telemetry == expected_latest_telemetry)
 
 test_sending_telemetry(device, token, 0, 0)
-test_sending_telemetry(device, token, 1, 1)
+test_sending_telemetry(device, token, 1, 0)
 test_sending_telemetry(device, token, 0, 1)
 
 
@@ -1414,34 +1398,50 @@ test_sending_telemetry(device, token, 0, 1)
 # assert(telemetry == {})
 
 
+
+def check_attributes(device_attributes: List[Dict[str, Any]], expected_attributes: Dict[str, Any], expected=True):
+    # device_attributes is a list of dicts, formatted [{"key": key, "lastUpdateTs": int, "value": val}]
+    for expected_key, expected_val in expected_attributes.items():
+        match: bool = False
+        for attr in device_attributes: # a dict, formatted [{"key": key, "lastUpdateTs": int, "value": val}]
+            if attr["key"] == expected_key and attr["value"] == expected_val:   # not checking the timestamps
+                match = True
+        assert(match == expected)
+
 new_attributes = {"my_new_attribute_3": 333, "my_new_attribute_4": 444}
-expected_attributes_for_shared_scope = {"my_shared_attribute_1": 111, **new_attributes}
-expected_attributes_for_server_scope = {"my_server_attribute_2": 222, **new_attributes}
+expected_attributes_for_shared_scope = {**shared_attributes, **new_attributes}
 
-device.set_server_attributes(new_attributes)
+expected_attributes_for_server_scope = {**server_attributes, **new_attributes}
+
 device.set_shared_attributes(new_attributes)
-assert(device.get_server_attributes() == expected_attributes_for_shared_scope)
-assert(device.get_shared_attributes() == expected_attributes_for_server_scope)
-device.delete_server_attributes(*(expected_attributes_for_server_scope.values()))
-device.delete_shared_attributes(*(expected_attributes_for_shared_scope.values()))
-assert(device.get_server_attributes() == None)
-assert(device.get_shared_attributes() == None)
+device.set_server_attributes(new_attributes)
+check_attributes(device.get_shared_attributes(), expected_attributes_for_shared_scope, True)
+check_attributes(device.get_server_attributes(), expected_attributes_for_server_scope, True)
+device.delete_shared_attributes([*(expected_attributes_for_shared_scope.keys())])
+device.delete_server_attributes([*(expected_attributes_for_server_scope.keys())])
+check_attributes(device.get_shared_attributes(), expected_attributes_for_shared_scope, False)
+check_attributes(device.get_server_attributes(), expected_attributes_for_server_scope, False)
 
 
+device.set_attributes({**shared_attributes, **new_attributes}, "Shared")
+device.set_attributes({**server_attributes, **new_attributes}, "Server")
+check_attributes(device.get_attributes("Shared"), expected_attributes_for_shared_scope, True)
+check_attributes(device.get_attributes("Server"), expected_attributes_for_server_scope, True)
+device.delete_attributes([*(expected_attributes_for_shared_scope.keys())], "Shared")
+device.delete_attributes([*(expected_attributes_for_server_scope.keys())], "Server")
+check_attributes(device.get_attributes("Shared"), expected_attributes_for_shared_scope, False)
+check_attributes(device.get_attributes("Server"), expected_attributes_for_server_scope, False)
 
-device.set_attributes(new_attributes, "Shared")
-device.set_attributes(new_attributes, "Server")
-assert(device.get_attributes("Shared") == expected_attributes_for_shared_scope)
-assert(device.get_attributes("Server") == expected_attributes_for_server_scope)
-device.delete_attributes(new_attributes, "Shared")
-device.delete_attributes(new_attributes, "Server")
-assert(device.get_server_attributes() == None)
-assert(device.get_shared_attributes() == None)
 
-device.assign_to_public_user()
+device = device.assign_to_public_user()
 assert(device.is_public())
 
 device.delete()
+try:
+    test_sending_telemetry(device, token, 1, 1)
+except requests.exceptions.HTTPError:
+    print("the device has been successfully deleted!")
+
 
 
 
