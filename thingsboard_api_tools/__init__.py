@@ -34,7 +34,40 @@ def check_enum(enum: Type[Enum], key: str) -> Any:
         return key
     raise TypeError(f"Enum only accepts values defined in the {enum} class (got {key})")
 
+def exact_match(name: str, object_list: List[str]) -> Any:
+    matches = []
+    for obj in object_list:
+        if obj.name == name:
+            matches.append(obj)
+
+    if matches == []:
+        return None
+
+    # check that all matches are equivalent
+    for obj in matches:
+        if obj != matches[0]:
+            raise Exception(f"multiple matches were found for name {name}")
+
+    return matches[0]
+
+class Dashboard():
+    pass
+class Customer():
+    pass
+class Device():
+    pass
+class TbApi():
+    class TbObjects():
+        pass
+    pass    # is this really necessary?
+
 class TbApi:
+
+    def tb_objects_from_list(self, json_list: List[str], object_type: type) -> list:
+        objects = []
+        for json in json_list:
+            objects.append(object_type(tbapi, **json))
+        return objects
 
     def __init__(self, url, username, password, token_timeout=600):  # 10 minutes
         self.mothership_url = url
@@ -77,18 +110,6 @@ class TbApi:
         return self.get("/api/customers?limit=99999", "Error retrieving customers")["data"]
 
 
-    def get_customer(self, name):
-        """
-        Get customer with specified name
-        """
-        customers = self.get(f"/api/customers?limit=99999&textSearch={name}", f"Can't find customer with name '{name}'")
-        for customer in customers["data"]:
-            if(customer["title"] == name):
-                return customer
-
-        return None
-
-
     def get_tenant_assets(self):
         """
         Returns a list of all assets for current tenant
@@ -103,7 +124,6 @@ class TbApi:
         return self.get("/api/tenant/devices?limit=99999", "Error retrieving devices for tenant")["data"]
 
 
-    # # TODO: Move to Customer.get_devices()
     # def get_customer_devices(self, cust):
     #     """
     #     Returns a list of all devices associated with a customer; pass in customer object or id
@@ -125,30 +145,9 @@ class TbApi:
         """
         Returns UUID of named customer, or None if user not found
         """
-        return self.get_id(self.get_customer(name))
+        return self.get_customer_by_name(name).id.id
 
 
-    def get_customer_by_id(self, cust_id):
-        return self.get(f"/api/customer/{cust_id}", f"Could not retrieve customer with id '{cust_id}'")
-
-
-    def get_customers_by_name(self, cust_name_prefix):
-        """
-        Returns a list of all customers starting with the specified name
-        """
-        return self.get(f"/api/customers?limit=99999&textSearch={cust_name_prefix}", f"Error retrieving customers with names starting with '{cust_name_prefix}'")["data"]
-
-
-    def get_customer_by_name(self, cust_name):
-        """
-        Returns a customer with the specified name, or None if we can't find one
-        """
-        custs = self.get_customers_by_name(cust_name)
-        for cust in custs:
-            if cust["title"] == cust_name:
-                return cust
-
-        return None
 
     def add_customer(self, name, address, address2, city, state, zip, country, email, phone, additional_info=None):
         """
@@ -172,25 +171,23 @@ class TbApi:
         return self.post("/api/customer", data, f"Error adding customer '{name}'")
 
 
-    # TODO: Move to Customer.delete()
-    def delete_customer_by_id(self, id):
-        """
-        Returns True if successful, False if the customer wasn't found
-        """
-        return self.delete(f"/api/customer/{id}", f"Error deleting customer '{id}'")
+    # def delete_customer_by_id(self, id):
+    #     """
+    #     Returns True if successful, False if the customer wasn't found
+    #     """
+    #     return self.delete(f"/api/customer/{id}", f"Error deleting customer '{id}'")
 
 
-    # TODO: Move to Customer.delete()
-    def delete_customer_by_name(self, name):
-        """
-        Returns True if successful, False if the customer wasn't found
-        """
-        id = self.get_user_uuid(name)
-        if id is None:
-            print(f"Could not find customer with name {name}")
-            return False
+    # def delete_customer_by_name(self, name):
+    #     """
+    #     Returns True if successful, False if the customer wasn't found
+    #     """
+    #     id = self.get_user_uuid(name)
+    #     if id is None:
+    #         print(f"Could not find customer with name {name}")
+    #         return False
 
-        return self.delete_customer_by_id(id)
+    #     return self.delete_customer_by_id(id)
 
 
     # TODO: Move to Dashboard.assign_to_customer(Customer)
@@ -203,7 +200,7 @@ class TbApi:
         return self.post(f"/api/customer/{customer_id}/dashboard/{dashboard_id}", None, f"Could not assign dashboard '{dashboard_id}' to customer '{customer_id}'")
 
 
-    # TODO: Move to Customer.assign_to_public_user()   or   Custmer.assign_to_customer(get_public_user())   ???
+    # TODO: Move to Dashboard.assign_to_public_user()   or   Dashboard.assign_to_customer(get_public_user())   ???
     def assign_dash_to_public_user(self, dash):
         """
         Pass in a dash or a dash_id
@@ -283,64 +280,79 @@ class TbApi:
         return self.get(f"/api/dashboard/info/{dash_id}", f"Error retrieving dashboard for '{dash_id}'")
 
 
+
     # TODO: Move to Dashboard.get_definition()
     def get_dashboard_definition(self, dash):
         dash_id = self.get_id(dash)
         return self.get(f"/api/dashboard/{dash_id}", f"Error retrieving dashboard definition for '{dash_id}'")
 
 
-    def get_device_by_id(self, device_id):
-        """
-        Returns an instantiated Device object
-        device_id can be either an Id object or a guid in the form of a string
-        """
-        if isinstance(device_id, Id):
-            device_id = device_id.id
 
-        # otherwise, assume device_id is a guid
+    def get_object_by_id(self, object_id, object_type: "TbObjectType"): # object_id can be an Id object or a guid
+
+        if isinstance(object_id, Id):
+            object_id = object_id.id
+        # otherwise, assume object_id is a guid
+        
         try:
-            json = self.get(f"/api/device/{device_id}", f"Could not retrieve device with id '{device_id}'")
-            return Device(self, **json)
+            json = self.get(f"/api/{object_type.name}/{object_id}", f"Could not retrieve {object_type.name} with id '{object_id}'")
+            return object_type.value(self, **json)
 
         except requests.exceptions.HTTPError as ex:
+            print(object_type.name)
             if ex.response.status_code == 404:
                 return None
             raise
 
-
-    def get_device_by_name(self, device_name):
+    def get_customer_by_id(self, cust_id):
         """
-        Returns device object representing the first device found with the given name, or None if one can't be found
+        Returns an instantiated Customer object
+        cust_id can be either an Id object or a guid
         """
-        devices = self.get_devices_by_name(device_name)
+        return self.get_object_by_id(cust_id, TbObjectType.customer)
 
-        # Find exact match
-        for device in devices:
-            if device.name == device_name:
-                return device
+    def get_customers_by_name(self, cust_name_prefix: str):
+        """
+        Returns a list of all customers starting with the specified name
+        """
+        json = self.get(f"/api/customers?limit=99999&textSearch={cust_name_prefix}", f"Error retrieving customers with names starting with '{cust_name_prefix}'")["data"]
+        return self.tb_objects_from_list(json, Customer)
 
-        return None
+    def get_customer_by_name(self, cust_name):
+        """
+        Returns a customer with the specified name, or None if we can't find one
+        """
+        customers = self.get_customers_by_name(cust_name)
+        return exact_match(cust_name, customers)
 
+    def get_all_customers(self):
+        json = self.get ("/api/customers?limit=99999", "Error fetching list of all customers")["data"]
+        return self.tb_objects_from_list(json, Customer)
+
+    def get_device_by_id(self, device_id):
+        """
+        Returns an instantiated Device object
+        device_id can be either an Id object or a guid
+        """
+        return self.get_object_by_id(device_id, TbObjectType.device)
 
     def get_devices_by_name(self, device_name_prefix):
         """
         Returns a list of all devices starting with the specified name
         """
         json = self.get(f"/api/tenant/devices?limit=99999&textSearch={device_name_prefix}", f"Error fetching devices with name matching '{device_name_prefix}'")["data"]
-        
-        devices = []
-        for device in json:
-            devices.append(Device(self, **device))
-        return devices
+        return self.tb_objects_from_list(json, Device)
 
+    def get_device_by_name(self, device_name):
+        """
+        Returns a device with the specified name, or None if we can't find one
+        """
+        devices = self.get_devices_by_name(device_name)
+        return exact_match(device_name, devices)
 
     def get_all_devices(self):
         json = self.get("/api/tenant/devices?limit=99999", "Error fetching list of all devices")["data"]
-        
-        devices = []
-        for device in json:
-            devices.append(Device(self, **device))
-        return devices
+        return self.tb_objects_from_list(json, Device)
 
     # TODO: ???
     def add_asset(self, asset_name, asset_type, shared_attributes, server_attributes):
@@ -1010,14 +1022,19 @@ class Customer(TbObject):
     def __str__(self) -> str:
         return "Customer (" + str(self.title) + ", " + str(self.id.id) + ")"
 
-    # TODO: Move to Customer.get_devices()
-    def get_customer_devices(self):
+    def get_devices(self):
         """
-        Returns a list of all devices associated with a customer; pass in customer object or id
+        Returns a list of all devices associated with a customer
         """
-        cust_id = self.get_id()
+        cust_id = self.id.id
 
         return self.tbapi.get(f"/api/customer/{cust_id}/devices?limit=99999", f"Error retrieving devices for customer '{cust_id}'")["data"]
+
+    def delete_customer(self):
+        """
+        Deletes the customer from the server
+        """
+        return self.tbapi.delete(f"/api/customer/{self.id.id}", f"Error deleting customer '{self.id.id}'")
 
     def is_public(self) -> bool:
         if not self.additional_info:
@@ -1225,6 +1242,10 @@ class DashboardDef(Dashboard):
         return f"Dashboard Definition ({self.name}, {self.title}, {self.id.id})"
 
 
+class TbObjectType(Enum):
+    dashboard = Dashboard
+    customer = Customer
+    device = Device
 #####################################
 # Tests
 
@@ -1259,14 +1280,13 @@ from config import mothership_url, thingsboard_username, thingsboard_password
 print("Loading data...", end=None)
 tbapi = TbApi(mothership_url, thingsboard_username, thingsboard_password)
 
-device = tbapi.get_device_by_name("Birdhouse 001")
-cust_json = tbapi.get_customer("Birdhouse 001")
+device = tbapi.get_device_by_name("Birdhouse 001")  # redundant (repeated below)
+customer = tbapi.get_customer_by_name("Birdhouse 001")  # redundant (repeated below)
 dash_json = tbapi.get_dashboard_by_name("Birdhouse 001 Dash")
 dash_def_json = tbapi.get_dashboard_definition("0d538a70-d996-11e7-a394-bf47d8c29be7")
 
 
 
-# TODO: Make these work:
 assert isinstance(tbapi.get_device_by_id(device.id.id), Device)     # Retrieve a device by its guid
 assert isinstance(tbapi.get_device_by_id(device.id), Device)        # Retrieve a device by an Id object
 # assert tbapi.get_device_by_id("f0ce0fd2-d051-11ea-b44a-83775d743133") is None          # Non-existent guid returns None
@@ -1344,6 +1364,8 @@ test_attributes(device, "Shared")
 
 
 print(" done with first round of tests.")
+
+print("testing devices round 2")
 
 # create a new device
 shared_attributes = {"my_shared_attribute_1": 111}
@@ -1443,8 +1465,31 @@ except requests.exceptions.HTTPError:
     print("the device has been successfully deleted!")
 
 
+print("done testing devices round 2")
 
+print("now testing customers")
 
+customer = tbapi.get_customer_by_name("Birdhouse 001")
+
+assert isinstance(customer, Customer)     # Retrieve a device by its guid
+assert isinstance(customer.id, Id)
+assert tbapi.get_customer_by_id(customer.id.id) == customer     # Retrieve a device by its guid
+assert tbapi.get_customer_by_id(customer.id) == customer     # Retrieve a device by its guid
+
+assert tbapi.get_customer_by_name("Does Not Exist") is None
+
+customers = tbapi.get_customers_by_name("Birdhouse 0")
+assert len(customers) > 1
+assert isinstance(customers[0], Customer)
+
+customers = tbapi.get_customers_by_name("Does Not Exist")
+assert len(customers) == 0
+
+customers = tbapi.get_all_customers()
+assert len(customers) > 1
+assert isinstance(customers[0], Customer)
+
+print("done with first round of customer tests")
 
 id = Id(id="12345", entity_type="TEST")
 
