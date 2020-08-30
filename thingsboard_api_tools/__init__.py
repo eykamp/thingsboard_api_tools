@@ -763,6 +763,7 @@ class TbApi:
         return DashboardDef(tbapi, **obj)
 
 
+    def get_object_by_id(self, object_id: str, object_type: Type[T]) -> T:  # object_id can be an Id object or a guid
         if isinstance(object_id, Id):
             object_id = object_id.id
         # otherwise, assume object_id is a guid
@@ -782,7 +783,7 @@ class TbApi:
         Returns an instantiated Customer object
         cust_id can be either an Id object or a guid
         """
-        return self.get_object_by_id(cust_id, TbObjectType.customer)
+        return self.get_object_by_id(cust_id, Customer)
 
 
     def get_customers_by_name(self, cust_name_prefix: str) -> List[Customer]:
@@ -812,7 +813,7 @@ class TbApi:
         Returns an instantiated Device object
         device_id can be either an Id object or a guid
         """
-        return self.get_object_by_id(device_id, TbObjectType.device)
+        return self.get_object_by_id(device_id, Device)
 
 
     def get_devices_by_name(self, device_name_prefix: str) -> List[Device]:
