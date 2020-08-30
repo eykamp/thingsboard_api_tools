@@ -43,7 +43,6 @@ class TbObject(TbModel):
     def __init__(self, tbapi: "TbApi", *args, **kwargs):
         super().__init__(*args, **kwargs)
         object.__setattr__(self, "tbapi", tbapi)
-        pass
 
 
 class Id(TbModel):
@@ -736,14 +735,21 @@ class TbApi:
         """
         Returns a list of all dashes starting with the specified name
         """
-        return self.get(f"/api/tenant/dashboards?limit=99999&textSearch={dash_name_prefix}", f"Error retrieving dashboards starting with '{dash_name_prefix}'")["data"]
+        objs = self.get(f"/api/tenant/dashboards?limit=99999&textSearch={dash_name_prefix}", f"Error retrieving dashboards starting with '{dash_name_prefix}'")["data"]
+
+        dashes = list()
+
+        for obj in objs:
+            dashes.append(Dashboard(tbapi, **obj))
+
+        return dashes
 
 
-    def get_dashboard_by_name(self, dash_name):
+    def get_dashboard_by_name(self, dash_name: str) -> Dashboard:
         """ Returns dashboard with specified name, or None if we can't find one """
         dashes = self.get_dashboards_by_name(dash_name)
         for dash in dashes:
-            if dash["title"] == dash_name:
+            if dash.title == dash_name:
                 return dash
 
         return None
