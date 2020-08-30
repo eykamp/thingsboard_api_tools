@@ -745,7 +745,7 @@ class TbApi:
         return dashes
 
 
-    def get_dashboard_by_name(self, dash_name: str) -> Dashboard:
+    def get_dashboard_by_name(self, dash_name: str) -> Optional[Dashboard]:
         """ Returns dashboard with specified name, or None if we can't find one """
         dashes = self.get_dashboards_by_name(dash_name)
         for dash in dashes:
