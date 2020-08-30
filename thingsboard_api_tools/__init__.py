@@ -810,8 +810,7 @@ class TbApi:
 
     def get_device_by_id(self, device_id: str) -> Device:
         """
-        Returns an instantiated Device object
-        device_id can be either an Id object or a guid
+        Returns an instantiated Device object device_id can be either an Id object or a guid
         """
         return self.get_object_by_id(device_id, Device)
 
