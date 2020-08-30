@@ -1276,7 +1276,7 @@ assert isinstance(device, Device)
 assert isinstance(device.id, Id)
 token = device.get_token()
 assert isinstance(token, str)
-assert len(token) == 20 # TODO: Verify right number here if it's not 20
+assert len(token) == 20     # TODO: Verify right number here if it's not 20
 
 # Make sure these calls produce equivalent results
 attrs1 = device.get_server_attributes()
