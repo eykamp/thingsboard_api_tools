@@ -769,6 +769,7 @@ class TbApi:
         return DashboardDef(tbapi, **obj)
 
 
+    # TODO: What should happen if we specify a bogus guid here?  Currently returns None... should raise an exception?
     def get_object_by_id(self, object_id: Union[Id, str], object_type: Type[T]) -> T:  # object_id can be an Id object or a guid
         if isinstance(object_id, Id):
             object_id = object_id.id
