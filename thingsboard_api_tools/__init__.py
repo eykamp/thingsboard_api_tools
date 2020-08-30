@@ -749,19 +749,17 @@ class TbApi:
         return None
 
 
-    def get_dashboard_by_id(self, dash):
+    def get_dashboard_by_id(self, dash_guid: str):
         """
         Retrieve dashboard by id
         """
-        dash_id = dash.id.id
-        return self.get(f"/api/dashboard/info/{dash_id}", f"Error retrieving dashboard for '{dash_id}'")
+        return self.get(f"/api/dashboard/info/{dash_guid}", f"Error retrieving dashboard for '{dash_guid}'")
 
 
 
     # TODO: Move to Dashboard.get_definition()
-    def get_dashboard_definition(self, dash):
-        dash_id = dash.id.id
-        return self.get(f"/api/dashboard/{dash_id}", f"Error retrieving dashboard definition for '{dash_id}'")
+    def get_dashboard_definition(self, dash_guid: str):
+        return self.get(f"/api/dashboard/{dash_guid}", f"Error retrieving dashboard definition for '{dash_guid}'")
 
 
     def get_object_by_id(self, object_id, object_type: "TbObjectType"):  # object_id can be an Id object or a guid
@@ -822,8 +820,8 @@ class TbApi:
         """
         Returns a list of all devices starting with the specified name
         """
-        json = self.get(f"/api/tenant/devices?limit=99999&textSearch={device_name_prefix}", f"Error fetching devices with name matching '{device_name_prefix}'")["data"]
-        return self.tb_objects_from_list(json, Device)
+        data = self.get(f"/api/tenant/devices?limit=99999&textSearch={device_name_prefix}", f"Error fetching devices with name matching '{device_name_prefix}'")["data"]
+        return self.tb_objects_from_list(data, Device)
 
 
     def get_device_by_name(self, device_name: str) -> Optional[Device]:
@@ -1216,7 +1214,6 @@ class TbApi:
 #####################################
 # Tests
 
-import json
 
 
 def get_birdhouses(tbapi):
@@ -1244,6 +1241,7 @@ def compare_dicts(d1, d2, path=""):
 
 # Get the secret stuff
 from config import mothership_url, thingsboard_username, thingsboard_password
+import json
 
 print("Loading data...", end=None)
 tbapi = TbApi(mothership_url, thingsboard_username, thingsboard_password)
