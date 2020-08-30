@@ -1248,8 +1248,8 @@ tbapi = TbApi(mothership_url, thingsboard_username, thingsboard_password)
 
 device = tbapi.get_device_by_name("Birdhouse 001")  # redundant (repeated below)
 customer = tbapi.get_customer_by_name("Birdhouse 001")  # redundant (repeated below)
-dash_json = tbapi.get_dashboard_by_name("Birdhouse 001 Dash")
-dash_def_json = tbapi.get_dashboard_definition("0d538a70-d996-11e7-a394-bf47d8c29be7")
+dash = tbapi.get_dashboard_by_name("Birdhouse 001 Dash")
+dash_def = tbapi.get_dashboard_definition("0d538a70-d996-11e7-a394-bf47d8c29be7")
 
 
 
