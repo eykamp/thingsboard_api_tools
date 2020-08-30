@@ -755,42 +755,35 @@ class TbApi:
         return None
 
 
-    def get_dashboard_by_id(self, dash_guid: str):
+    def get_dashboard_by_id(self, dash_id: Union[Id, str]) -> Dashboard:
         """
         Retrieve dashboard by id
         """
-        return self.get(f"/api/dashboard/info/{dash_guid}", f"Error retrieving dashboard for '{dash_guid}'")
+        if isinstance(dash_id, Id):
+            dash_id = dash_id.id
+        # otherwise, assume dash_id is a guid
+
+        obj = self.get(f"/api/dashboard/info/{dash_id}", f"Error retrieving dashboard for '{dash_id}'")
+        return Dashboard(self, **obj)
 
 
 
     # TODO: Move to Dashboard.get_definition()
-    def get_dashboard_definition(self, dash_guid: str) -> DashboardDef:
+    def get_dashboard_definition(self, dash_guid: Union[Id, str]) -> DashboardDef:
         obj = self.get(f"/api/dashboard/{dash_guid}", f"Error retrieving dashboard definition for '{dash_guid}'")
         return DashboardDef(tbapi, **obj)
 
 
-    # TODO: What should happen if we specify a bogus guid here?  Currently returns None... should raise an exception?
-    def get_object_by_id(self, object_id: Union[Id, str], object_type: Type[T]) -> T:  # object_id can be an Id object or a guid
-        if isinstance(object_id, Id):
-            object_id = object_id.id
-        # otherwise, assume object_id is a guid
-
-        try:
-            json = self.get(f"/api/{object_type.name}/{object_id}", f"Could not retrieve {object_type.name} with id '{object_id}'")
-            return object_type.value(self, **json)
-
-        except requests.exceptions.HTTPError as ex:
-            print(object_type.name)
-            if ex.response.status_code == 404:
-                return None
-            raise
-
-    def get_customer_by_id(self, cust_id: str) -> Customer:
+    def get_customer_by_id(self, cust_id: Union[Id, str]) -> Customer:
         """
-        Returns an instantiated Customer object
-        cust_id can be either an Id object or a guid
+        Returns an instantiated Customer object cust_id can be either an Id object or a guid
         """
-        return self.get_object_by_id(cust_id, Customer)
+        if isinstance(cust_id, Id):
+            cust_id = cust_id.id
+        # otherwise, assume cust_id is a guid
+
+        json = self.get(f"/api/customer/{cust_id}", f"Could not retrieve Customer with id '{cust_id}'")
+        return Customer.value(self, **json)
 
 
     def get_customers_by_name(self, cust_name_prefix: str) -> List[Customer]:
@@ -819,7 +812,12 @@ class TbApi:
         """
         Returns an instantiated Device object device_id can be either an Id object or a guid
         """
-        return self.get_object_by_id(device_id, Device)
+        if isinstance(device_id, Id):
+            device_id = device_id.id
+        # otherwise, assume device_id is a guid
+
+        json = self.get(f"/api/device/{device_id}", f"Could not retrieve Device with id '{device_id}'")
+        return Device(self, **json)
 
 
     def get_devices_by_name(self, device_name_prefix: str) -> List[Device]:
@@ -1248,6 +1246,7 @@ def compare_dicts(d1, d2, path=""):
 # Get the secret stuff
 from config import mothership_url, thingsboard_username, thingsboard_password
 import json
+from requests.exceptions import HTTPError
 
 print("Loading data...", end=None)
 tbapi = TbApi(mothership_url, thingsboard_username, thingsboard_password)
@@ -1256,6 +1255,32 @@ device = tbapi.get_device_by_name("Birdhouse 001")  # redundant (repeated below)
 customer = tbapi.get_customer_by_name("Birdhouse 001")  # redundant (repeated below)
 dash = tbapi.get_dashboard_by_name("Birdhouse 001 Dash")
 dash_def = tbapi.get_dashboard_definition("0d538a70-d996-11e7-a394-bf47d8c29be7")
+
+
+# Bad guid should generate 404
+try:
+    bogus = tbapi.get_dashboard_definition("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid
+    assert False
+except HTTPError:
+    pass
+
+try:
+    bogus = tbapi.get_dashboard_by_id("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid
+    assert False
+except HTTPError:
+    pass
+
+try:
+    bogus = tbapi.get_device_by_id("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid
+    assert False
+except HTTPError:
+    pass
+
+try:
+    bogus = tbapi.get_customer_by_id("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid
+    assert False
+except HTTPError:
+    pass
 
 
 
