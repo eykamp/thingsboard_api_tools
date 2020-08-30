@@ -732,7 +732,7 @@ class TbApi:
         return self.post("/api/dashboard", dash_def, "Error saving dashboard")
 
 
-    def get_dashboards_by_name(self, dash_name_prefix):
+    def get_dashboards_by_name(self, dash_name_prefix: str) -> List[Dashboard]:
         """
         Returns a list of all dashes starting with the specified name
         """
@@ -758,11 +758,10 @@ class TbApi:
 
 
     # TODO: Move to Dashboard.get_definition()
-    def get_dashboard_definition(self, dash_guid: str):
-        return self.get(f"/api/dashboard/{dash_guid}", f"Error retrieving dashboard definition for '{dash_guid}'")
+    def get_dashboard_definition(self, dash_guid: str) -> DashboardDef:
+        obj = self.get(f"/api/dashboard/{dash_guid}", f"Error retrieving dashboard definition for '{dash_guid}'")
+        return DashboardDef(tbapi, **obj)
 
-
-    def get_object_by_id(self, object_id, object_type: "TbObjectType"):  # object_id can be an Id object or a guid
 
         if isinstance(object_id, Id):
             object_id = object_id.id
@@ -778,7 +777,7 @@ class TbApi:
                 return None
             raise
 
-    def get_customer_by_id(self, cust_id):
+    def get_customer_by_id(self, cust_id: str) -> Customer:
         """
         Returns an instantiated Customer object
         cust_id can be either an Id object or a guid
@@ -803,12 +802,12 @@ class TbApi:
         return exact_match(cust_name, customers)
 
 
-    def get_all_customers(self):
+    def get_all_customers(self) -> List[Customer]:
         json = self.get("/api/customers?limit=99999", "Error fetching list of all customers")["data"]
         return self.tb_objects_from_list(json, Customer)
 
 
-    def get_device_by_id(self, device_id):
+    def get_device_by_id(self, device_id: str) -> Device:
         """
         Returns an instantiated Device object
         device_id can be either an Id object or a guid
@@ -1132,7 +1131,7 @@ class TbApi:
             headers["X-Authorization"] = "Bearer " + token
 
 
-    def get(self, params, msg: str):
+    def get(self, params, msg: str) -> Dict[str, Any]:
         url = self.mothership_url + params
         headers = {"Accept": "application/json"}
         self.add_auth_header(headers)
