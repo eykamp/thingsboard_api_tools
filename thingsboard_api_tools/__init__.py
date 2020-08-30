@@ -769,7 +769,7 @@ class TbApi:
         return DashboardDef(tbapi, **obj)
 
 
-    def get_object_by_id(self, object_id: str, object_type: Type[T]) -> T:  # object_id can be an Id object or a guid
+    def get_object_by_id(self, object_id: Union[Id, str], object_type: Type[T]) -> T:  # object_id can be an Id object or a guid
         if isinstance(object_id, Id):
             object_id = object_id.id
         # otherwise, assume object_id is a guid
