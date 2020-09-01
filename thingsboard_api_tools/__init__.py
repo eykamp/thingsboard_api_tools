@@ -1175,7 +1175,7 @@ class TbApi:
         return response.json()
 
 
-    def delete(self, params, msg):
+    def delete(self, params, msg: str) -> bool:
         url = self.mothership_url + params
         headers = {"Accept": "application/json"}
         self.add_auth_header(headers)
