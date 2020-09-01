@@ -210,7 +210,7 @@ class Device(TbObject):
     def is_public(self) -> bool:
         """ Return True if device is owned by the public user, False otherwise """
         pub_id = self.tbapi.get_public_user_id()
-        return self.customer_id.id == pub_id
+        return self.customer_id == pub_id
 
 
     # TODO: Fix
@@ -641,23 +641,14 @@ class TbApi:
     #     return self.get(f"/api/customer/{cust_id}/devices?limit=99999", f"Error retrieving devices for customer '{cust_id}'")["data"]
 
 
-    def get_public_user_id(self) -> str:
+    def get_public_user_id(self) -> Id:
         """
         Returns UUID of public customer, or None if there is none
         """
         if not self.public_user_id:
-            self.public_user_id = self.get_user_uuid("Public")
+            self.public_user_id = self.get_customer_by_name("Public").id
 
         return self.public_user_id
-
-
-    # TODO: ???
-    def get_user_uuid(self, name):
-        """
-        Returns UUID of named customer, or None if user not found
-        """
-        return self.get_customer_by_name(name).id.id
-
 
 
     def add_customer(self, name, address, address2, city, state, zip, country, email, phone, additional_info=None):
@@ -729,7 +720,7 @@ class TbApi:
         dashboard_id = dash.id.id
         public_id = self.get_public_user_id()
 
-        return f"{self.mothership_url}/dashboard/{dashboard_id}?publicId={public_id}"
+        return f"{self.mothership_url}/dashboard/{dashboard_id}?publicId={public_id.id}"
 
 
     # TODO: Move to Dashboard.delete()
