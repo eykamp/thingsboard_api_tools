@@ -181,9 +181,9 @@ class Device(TbObject):
         return self.tbapi.delete(f"/api/device/{self.id.id}", f"Error deleting device '{self.id.id}'")
 
 
-    def get_customer(self):
-        """ Returns the id of the customer assigned to the device """
-        return self.customer_id.id
+    def get_customer(self) -> Customer:
+        """ Returns the customer assigned to the device """
+        return self.tbapi.get_customer_by_id(self.customer_id)
 
 
     def assign_to_public_user(self):
@@ -1333,6 +1333,8 @@ attrs1 = device.get_client_attributes()
 attrs2 = device.get_attributes(AttributeScope.CLIENT)
 assert attrs1 == attrs2
 assert len(attrs1) > 0
+
+assert device.get_customer().id.entity_type == EntityType.CUSTOMER
 
 
 # Set/retrieve/delete attributes
