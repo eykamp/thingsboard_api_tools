@@ -80,8 +80,6 @@ class Customer(TbObject):
     email: Optional[str]
     phone: Optional[str]
     additional_info: Optional[Dict] = Field(alias="additionalInfo")
-    # customer_id: Id = Field(alias="customerId")
-    # public: bool
 
     def __str__(self) -> str:
         return "Customer (" + str(self.title) + ", " + str(self.id.id) + ")"
