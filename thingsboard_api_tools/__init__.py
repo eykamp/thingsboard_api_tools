@@ -1222,21 +1222,17 @@ class TbApi:
 
 
     @staticmethod
-    def validate_response(response, msg):
+    def validate_response(response: requests.Response, msg: str) -> None:
         try:
             response.raise_for_status()
         except requests.exceptions.RequestException as ex:
-            ex.args += (f"RESPONSE BODY: {response.content.decode('utf8')}",)        # Append our response to the exception to make it easier to figure out what went wrong
+            ex.args += (msg, f"RESPONSE BODY: {response.content.decode('utf8')}")       # Append response to the exception to make it easier to diagnose
             raise
 
-        except requests.exceptions.HTTPError:
-            # if ex.response.status_code == 404:
-            #     return None
-            # else:
-            #     raise ex
-            # if "Invalid UUID string:" in ex.http_error_msg:
-            #     return None
-            return None
+        except requests.exceptions.HTTPError as ex:
+            if ex.response.status_code != 404:
+                ex.args += (msg, f"RESPONSE BODY: {response.content.decode('utf8')}")   # Append response to the exception to make it easier to diagnose
+                raise
 
 #####################################
 # Tests
