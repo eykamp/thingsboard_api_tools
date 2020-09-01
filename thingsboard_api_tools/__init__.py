@@ -27,6 +27,18 @@ from pydantic import BaseModel, Field
 from enum import Enum
 
 
+class AttributeScope(Enum):
+    SERVER = "SERVER_SCOPE"
+    SHARED = "SHARED_SCOPE"
+    CLIENT = "CLIENT_SCOPE"
+
+
+class EntityType(Enum):
+    CUSTOMER = "CUSTOMER"
+    DASHBOARD = "DASHBOARD"
+    DEVICE = "DEVICE"
+
+
 class TbModel(BaseModel):
     class Config:
         json_encoders = {
@@ -51,19 +63,6 @@ class Id(TbModel):
 
     def __str__(self) -> str:
         return f"Id ({self.entity_type}, {self.id})"
-
-
-class AttributeScope(Enum):
-    SERVER = "SERVER_SCOPE"
-    SHARED = "SHARED_SCOPE"
-    CLIENT = "CLIENT_SCOPE"
-
-
-# TODO: Flesh out
-class EntityType(Enum):
-    CUSTOMER = "CUSTOMER"
-    DASHBOARD = "DASHBOARD"
-    DEVICE = "DEVICE"
 
 
 class Device(TbObject):
