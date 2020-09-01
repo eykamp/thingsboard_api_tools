@@ -183,7 +183,7 @@ class Device(TbObject):
         pass
 
 
-    def delete(self):
+    def delete(self) -> bool:
         """ Returns True if device was deleted, False if it did not exist """
         return self.tbapi.delete(f"/api/device/{self.id.id}", f"Error deleting device '{self.id.id}'")
 
@@ -880,7 +880,7 @@ class TbApi:
 
 
     # TODO: Move to Device.new(tbapi,.....).save()?  # or not
-    def add_device(self, device_name: str, device_type: str, shared_attributes: Optional[Dict[str, Any]] = None, server_attributes: Optional[Dict[str, Any]] = None): # -> Device: TODO: why won't python allow this??
+    def add_device(self, device_name: str, device_type: str, shared_attributes: Optional[Dict[str, Any]] = None, server_attributes: Optional[Dict[str, Any]] = None) -> Device:
         """
         Returns device object
         """
@@ -1424,12 +1424,13 @@ print(" done with first round of tests.")
 
 print("testing devices round 2")
 
+exit()
 # create a new device
 shared_attributes = {"my_shared_attribute_1": 111}
 server_attributes = {"my_server_attribute_2": 222}
 device = tbapi.add_device("Device Test Subject", "Guinea Pig", shared_attributes=shared_attributes, server_attributes=server_attributes)
 
-assert(isinstance(device.get_customer(), str)) # should be a guid
+assert(isinstance(device.get_customer(), Customer)) # should be a guid
 token = device.get_token()
 assert(isinstance(token, str))
 assert(len(token) == 20)
@@ -1632,7 +1633,9 @@ check_attributes(device.get_attributes(AttributeScope.SERVER), expected_attribut
 device = device.assign_to_public_user()
 assert(device.is_public())
 
-device.delete()
+assert device.delete()
+assert not device.delete()      # Can't delete again
+
 try:
     test_sending_telemetry(device, token, 1, 1)
 except requests.exceptions.HTTPError:
