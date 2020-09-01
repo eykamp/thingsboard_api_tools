@@ -287,25 +287,29 @@ class Device(TbObject):
 
 
     # getting attributes from the server
-    def get_server_attributes(self):
+    def get_server_attributes(self) -> List[Dict[str, Any]]:
         """ Returns a list of the device's attributes in a the Server scope. """
         return self.get_attributes(AttributeScope.SERVER)
 
 
-    def get_shared_attributes(self):
+    def get_shared_attributes(self) -> List[Dict[str, Any]]:
         """ Returns a list of the device's attributes in a the Shared scope. """
         return self.get_attributes(AttributeScope.SHARED)
 
 
-    def get_client_attributes(self):
+    def get_client_attributes(self) -> List[Dict[str, Any]]:
         """ Returns a list of the device's attributes in a the Client scope. """
         return self.get_attributes(AttributeScope.CLIENT)
 
 
-    def get_attributes(self, scope: AttributeScope):
-        """ Returns a list of the device's attributes in the specified scope. """
+    def get_attributes(self, scope: AttributeScope) -> List[Dict[str, Any]]:
+        """
+        Returns a list of the device's attributes in the specified scope.
+        Looks like [{'key': 'active', 'lastUpdateTs': 1595969455329, 'value': False}, ...]
+        """
         x = self.tbapi.get(f"/api/plugins/telemetry/DEVICE/{self.id.id}/values/attributes/{scope.value}", f"Error retrieving {scope.value} attributes for '{self.id.id}'")
         return x    # for debugging purposes
+
 
     # setting attributes to the server
     def set_server_attributes(self, attributes: Dict[str, Any]):
