@@ -371,7 +371,7 @@ class Device(TbObject):
 T = TypeVar("T", Customer, Device)
 
 
-def exact_match(name: str, object_list: List[T]) -> Optional[T]:
+def _exact_match(name: str, object_list: List[T]) -> Optional[T]:
     matches = []
     for obj in object_list:
         if obj.name == name:
@@ -832,7 +832,7 @@ class TbApi:
         Returns a customer with the specified name, or None if we can't find one
         """
         customers = self.get_customers_by_name(cust_name)
-        return exact_match(cust_name, customers)
+        return _exact_match(cust_name, customers)
 
 
     def get_all_customers(self) -> List[Customer]:
@@ -863,7 +863,7 @@ class TbApi:
     def get_device_by_name(self, device_name: str) -> Optional[Device]:
         """ Returns a device with the specified name, or None if we can't find one """
         devices = self.get_devices_by_name(device_name)
-        return exact_match(device_name, devices)
+        return _exact_match(device_name, devices)
 
 
     def get_all_devices(self):
