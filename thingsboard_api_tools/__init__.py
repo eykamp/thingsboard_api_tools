@@ -250,8 +250,11 @@ class Device(TbObject):
         return self.tbapi.get(params, error_message)
 
 
-    def send_telemetry(self, device_token: str, data: Dict, timestamp: int = 0):
+    def send_telemetry(self, device_token: str, data: Dict[str, Any], timestamp: int = 0):
         """ Note that this requires the device's secret token as the first argument """
+        if not data:
+            return
+
         device_token = self.get_token()
 
         if timestamp:
@@ -277,9 +280,9 @@ class Device(TbObject):
     def get_token(self) -> str:
         """ Returns the device's secret token from the server and caches it """
         if self.device_token is None:
-            json = self.tbapi.get(f"/api/device/{self.id.id}/credentials", f"Error retreiving device_key for device '{self.id.id}'")
-            object.__setattr__(self, "device_token", json["credentialsId"])
-            # self.device_token = json["credentialsId"]
+            obj = self.tbapi.get(f"/api/device/{self.id.id}/credentials", f"Error retreiving device_key for device '{self.id.id}'")
+            object.__setattr__(self, "device_token", obj["credentialsId"])
+            # self.device_token = obj["credentialsId"]
         return self.device_token
 
 
