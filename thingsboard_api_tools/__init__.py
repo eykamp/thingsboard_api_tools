@@ -59,6 +59,13 @@ class AttributeScope(Enum):
     CLIENT = "CLIENT_SCOPE"
 
 
+# TODO: Flesh out
+class EntityType(Enum):
+    CUSTOMER = "CUSTOMER"
+    DASHBOARD = "DASHBOARD"
+    DEVICE = "DEVICE"
+
+
 class Device(TbObject):
     id: Id
     additional_info: Optional[dict] = Field(alias="additionalInfo")
@@ -767,7 +774,6 @@ class TbApi:
         return Dashboard(self, **obj)
 
 
-
     # TODO: Move to Dashboard.get_definition()
     def get_dashboard_definition(self, dash_guid: Union[Id, str]) -> DashboardDef:
         obj = self.get(f"/api/dashboard/{dash_guid}", f"Error retrieving dashboard definition for '{dash_guid}'")
@@ -782,16 +788,16 @@ class TbApi:
             cust_id = cust_id.id
         # otherwise, assume cust_id is a guid
 
-        json = self.get(f"/api/customer/{cust_id}", f"Could not retrieve Customer with id '{cust_id}'")
-        return Customer.value(self, **json)
+        obj = self.get(f"/api/customer/{cust_id}", f"Could not retrieve Customer with id '{cust_id}'")
+        return Customer(tbapi, **obj)
 
 
     def get_customers_by_name(self, cust_name_prefix: str) -> List[Customer]:
         """
         Returns a list of all customers starting with the specified name
         """
-        json = self.get(f"/api/customers?limit=99999&textSearch={cust_name_prefix}", f"Error retrieving customers with names starting with '{cust_name_prefix}'")["data"]
-        x = self.tb_objects_from_list(json, Customer)
+        obj = self.get(f"/api/customers?limit=99999&textSearch={cust_name_prefix}", f"Error retrieving customers with names starting with '{cust_name_prefix}'")["data"]
+        x = self.tb_objects_from_list(obj, Customer)
         return x
 
 
@@ -804,8 +810,8 @@ class TbApi:
 
 
     def get_all_customers(self) -> List[Customer]:
-        json = self.get("/api/customers?limit=99999", "Error fetching list of all customers")["data"]
-        return self.tb_objects_from_list(json, Customer)
+        obj = self.get("/api/customers?limit=99999", "Error fetching list of all customers")["data"]
+        return self.tb_objects_from_list(obj, Customer)
 
 
     def get_device_by_id(self, device_id: str) -> Device:
@@ -816,8 +822,8 @@ class TbApi:
             device_id = device_id.id
         # otherwise, assume device_id is a guid
 
-        json = self.get(f"/api/device/{device_id}", f"Could not retrieve Device with id '{device_id}'")
-        return Device(self, **json)
+        obj = self.get(f"/api/device/{device_id}", f"Could not retrieve Device with id '{device_id}'")
+        return Device(self, **obj)
 
 
     def get_devices_by_name(self, device_name_prefix: str) -> List[Device]:
@@ -1256,8 +1262,13 @@ customer = tbapi.get_customer_by_name("Birdhouse 001")  # redundant (repeated be
 dash = tbapi.get_dashboard_by_name("Birdhouse 001 Dash")
 dash_def = tbapi.get_dashboard_definition("0d538a70-d996-11e7-a394-bf47d8c29be7")
 
+# Validate the EntityType enum
+assert device.id.entity_type == EntityType.DEVICE.value
+assert customer.id.entity_type == EntityType.CUSTOMER.value
+assert dash.id.entity_type == EntityType.DASHBOARD.value
+assert dash_def.id.entity_type == EntityType.DASHBOARD.value
 
-# Bad guid should generate 404
+
 try:
     bogus = tbapi.get_dashboard_definition("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid
     assert False
@@ -1266,12 +1277,6 @@ except HTTPError:
 
 try:
     bogus = tbapi.get_dashboard_by_id("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid
-    assert False
-except HTTPError:
-    pass
-
-try:
-    bogus = tbapi.get_device_by_id("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid
     assert False
 except HTTPError:
     pass
@@ -1286,10 +1291,14 @@ except HTTPError:
 
 assert isinstance(tbapi.get_device_by_id(device.id.id), Device)     # Retrieve a device by its guid
 assert isinstance(tbapi.get_device_by_id(device.id), Device)        # Retrieve a device by an Id object
-# assert tbapi.get_device_by_id("f0ce0fd2-d051-11ea-b44a-83775d743133") is None          # Non-existent guid returns None
-# assert tbapi.get_device_by_id(None) is None                         # None returns None
 
-assert tbapi.get_device_by_name("Does Not Exist") is None
+try:
+    bogus = tbapi.get_device_by_id("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid -> failure raises exception
+    assert False
+except HTTPError:
+    pass
+
+assert tbapi.get_device_by_name("Does Not Exist") is None   # Bogus name -> failure returns None
 
 devices = tbapi.get_devices_by_name("Birdhouse 0")
 assert len(devices) > 1
@@ -1307,7 +1316,7 @@ assert isinstance(device, Device)
 assert isinstance(device.id, Id)
 token = device.get_token()
 assert isinstance(token, str)
-assert len(token) == 20     # TODO: Verify right number here if it's not 20
+assert len(token) == 20     # Tokens are always 20 character strings
 
 # Make sure these calls produce equivalent results
 attrs1 = device.get_server_attributes()
@@ -1376,6 +1385,119 @@ token = device.get_token()
 assert(isinstance(token, str))
 assert(len(token) == 20) # maybe?
 
+# Customer tests
+print("now testing customers")
+
+customer = tbapi.get_customer_by_name("Birdhouse 001")
+
+assert isinstance(customer, Customer)
+assert isinstance(customer.id, Id)
+assert tbapi.get_customer_by_id(customer.id.id) == customer
+assert tbapi.get_customer_by_id(customer.id) == customer
+
+assert tbapi.get_customer_by_name("Does Not Exist") is None
+
+customers = tbapi.get_customers_by_name("Birdhouse 0")
+assert len(customers) > 1
+assert isinstance(customers[0], Customer)
+
+customers = tbapi.get_customers_by_name("Does Not Exist")
+assert len(customers) == 0
+
+customers = tbapi.get_all_customers()
+assert len(customers) > 1
+assert isinstance(customers[0], Customer)
+
+
+try:
+    print(customer.additionalInfo)     # Should not be accessible -- we remapped this name
+    assert False
+except AttributeError:
+    pass
+
+# Assign an unknown attribute -- should raise exception
+try:
+    customer.unknown = "LLL"
+    assert False
+except ValueError:
+    pass
+
+# Assign an unknown attribute II -- should raise exception
+try:
+    customer["unknown"] = "LLL"
+    assert False
+except TypeError:
+    pass
+
+# Access an unknown attribute -- should raise exception
+try:
+    print(customer.unknown)
+    assert False
+except AttributeError:
+    pass
+
+# Access an unknown attribute II -- should raise exception
+try:
+    print(customer["strange"])
+    assert False
+except TypeError:
+    pass
+
+
+# Construct with an unknown attribute -- should raise exception
+bad_cust_dict = customer.dict(by_alias=True)
+bad_cust_dict["unknown_attr"] = 666
+try:
+    bad_c = Customer.from_dict(bad_cust_dict)
+    assert False
+except AttributeError:
+    pass
+
+# Time handled correctly (also verifies name translation: createdTime -> created_time -> createdTime)
+assert(isinstance(customer.created_time, datetime))            # Rehydrated time is a datetime
+assert(isinstance(json.loads(customer.json(by_alias=True))["createdTime"], int))     # Serialized time is int
+
+
+
+# Dashboard built right?
+assert type(dash.assigned_customers[0]) is CustomerId
+
+# Check attribute renaming at top level -- incoming json uses createdTime, we remap to created_time.  Make sure it works.
+assert dash.created_time
+try:
+    dash.createdTime
+    assert False
+except AttributeError:
+    pass
+
+# And check remapping when converting back to json
+assert json.loads(dash.json(by_alias=True)).get("createdTime")
+assert json.loads(dash.json(by_alias=True)).get("created_time") is None
+
+# Check nested attribute renaming
+assert dash.assigned_customers[0].customer_id.entity_type == EntityType.CUSTOMER.value
+try:
+    dash.assigned_customers[0].customer_id.entityType
+    assert False
+except AttributeError:
+    pass
+assert json.loads(dash.json(by_alias=True))["assignedCustomers"][0].get("customerId", {}).get("entityType") == EntityType.CUSTOMER.value
+assert json.loads(dash.json(by_alias=True))["assignedCustomers"][0].get("customerId", {}).get("entity_type") is None
+
+# assert(Device.from_dict(d.to_dict).to_dict == d.to_dict)
+
+
+# Serialized looks like original?
+# compare_dicts(dev_json, json.loads(d.json(by_alias=True)))
+
+
+# Check GuidList[Id, Customer] ==> should fail
+
+assert dash.is_public() is True
+
+
+
+# Device telemetry tests -- TODO: make sure these clean up after themselves!
 keys = ["datum_1", "datum_2"]
 values = [555, 666]
 timestamps = [1595897301 * 1000, 1595897302 * 1000] # second timestamp must be greater than first for check to work
@@ -1384,6 +1506,7 @@ timestamps = [1595897301 * 1000, 1595897302 * 1000] # second timestamp must be g
 expected_tel_keys = []
 tel_keys = device.get_telemetry_keys()
 assert(tel_keys == expected_tel_keys)
+
 
 expected_telemetry = {}
 expected_latest_telemetry = {}
@@ -1468,136 +1591,3 @@ except requests.exceptions.HTTPError:
 
 
 print("done testing devices round 2")
-
-print("now testing customers")
-
-customer = tbapi.get_customer_by_name("Birdhouse 001")
-
-assert isinstance(customer, Customer)
-assert isinstance(customer.id, Id)
-assert tbapi.get_customer_by_id(customer.id.id) == customer
-assert tbapi.get_customer_by_id(customer.id) == customer
-
-assert tbapi.get_customer_by_name("Does Not Exist") is None
-
-customers = tbapi.get_customers_by_name("Birdhouse 0")
-assert len(customers) > 1
-assert isinstance(customers[0], Customer)
-
-customers = tbapi.get_customers_by_name("Does Not Exist")
-assert len(customers) == 0
-
-customers = tbapi.get_all_customers()
-assert len(customers) > 1
-assert isinstance(customers[0], Customer)
-
-print("done with first round of customer tests")
-
-id = Id(id="12345", entity_type="TEST")
-
-print(id)
-# d = Device(tbapi, **dev_json)
-
-print("d.id", d.id)
-d.id = 555
-# d.bad = 67
-print("d.id", d.id)
-pass
-
-
-# c = Customer(tbapi, **cust_json)
-
-
-# debug(dash_def_json)
-dash_json["tbapi"] = tbapi
-dash = Dashboard.parse_obj(dash_json)
-dash_def_json["tbapi"] = tbapi
-dash_def = DashboardDef.parse_obj(dash_def_json)
-
-
-try:
-    print(c.additionalInfo)     # Should not be accessible -- we remapped this name
-    assert False
-except AttributeError:
-    pass
-
-
-
-# Assign an unknown attribute -- should raise exception
-try:
-    c.unknown = "LLL"
-    assert False
-except ValueError:
-    pass
-
-# Assign an unknown attribute II -- should raise exception
-try:
-    c["unknown"] = "LLL"
-    assert False
-except TypeError:
-    pass
-
-# Access an unknown attribute -- should raise exception
-try:
-    print(c.unknown)
-    assert False
-except AttributeError:
-    pass
-
-# Access an unknown attribute II -- should raise exception
-try:
-    print(c["strange"])
-    assert False
-except TypeError:
-    pass
-
-
-# Construct with an unknown attribute -- should raise exception
-bad_cust_json = cust_json.copy()
-bad_cust_json["unknown_attr"] = 666
-try:
-    bad_c = Customer.from_dict(bad_cust_json)
-    assert False
-except AttributeError:
-    pass
-
-# Time handled correctly (also verifies name translation: createdTime -> created_time -> createdTime)
-assert(isinstance(c.created_time, datetime))            # Rehydrated time is a datetime
-assert(isinstance(json.loads(c.json(by_alias=True))["createdTime"], int))     # Serialized time is int
-
-
-# Dashboard built right?
-assert(type(dash.assigned_customers[0]) is CustomerId)
-
-# Check attribute renaming at top level
-assert(d.created_time)
-try:
-    d.createdTime
-    assert False
-except AttributeError:
-    pass
-assert(json.loads(d.json(by_alias=True)).get("createdTime"))
-assert(json.loads(d.json(by_alias=True)).get("created_time") is None)
-
-# Check nested attribute renaming
-assert(d.customer_id.entity_type)
-try:
-    d.customer_id.entityType
-    assert False
-except AttributeError:
-    pass
-assert(json.loads(d.json(by_alias=True)).get("customerId", {}).get("entityType"))
-assert(json.loads(d.json(by_alias=True)).get("customerId", {}).get("entity_type") is None)
-
-# assert(Device.from_dict(d.to_dict).to_dict == d.to_dict)
-
-
-# Serialized looks like original?
-# compare_dicts(dev_json, json.loads(d.json(by_alias=True)))
-
-
-# Check GuidList[Id, Customer] ==> should fail
-
-assert(dash.is_public() is True)
-
-pass
