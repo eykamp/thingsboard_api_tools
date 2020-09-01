@@ -65,6 +65,98 @@ class Id(TbModel):
         return f"Id ({self.entity_type}, {self.id})"
 
 
+class Customer(TbObject):
+    id: Id
+    title: Optional[str]
+    created_time: datetime = Field(alias="createdTime")
+    tenant_id: Id = Field(alias="tenantId")
+    name: Optional[str]
+    address: Optional[str]
+    address2: Optional[str]
+    city: Optional[str]
+    state: Optional[str]
+    zip: Optional[str]
+    country: Optional[str]
+    email: Optional[str]
+    phone: Optional[str]
+    additional_info: Optional[Dict] = Field(alias="additionalInfo")
+    # customer_id: Id = Field(alias="customerId")
+    # public: bool
+
+    def __str__(self) -> str:
+        return "Customer (" + str(self.title) + ", " + str(self.id.id) + ")"
+
+    def get_devices(self):
+        """
+        Returns a list of all devices associated with a customer
+        """
+        cust_id = self.id.id
+
+        return self.tbapi.get(f"/api/customer/{cust_id}/devices?limit=99999", f"Error retrieving devices for customer '{cust_id}'")["data"]
+
+    def delete(self):
+        """
+        Deletes the customer from the server
+        """
+        return self.tbapi.delete(f"/api/customer/{self.id.id}", f"Error deleting customer '{self.id.id}'")
+
+
+    def is_public(self) -> bool:
+        if not self.additional_info:
+            return False
+        # else
+        return self.additional_info.get("isPublic", False)
+
+
+    def update(self, **kwargs):  # dder: str
+        #     name: Optional[str] = None,
+        #     address: Optional[str] = None,
+        #     address2: Optional[str] = None,
+        #     city: Optional[str] = None,
+        #     state: Optional[str] = None,
+        #     zip: Optional[str] = None,
+        #     country: Optional[str] = None,
+        #     email: Optional[str] = None,
+        #     phone: Optional[str] = None,
+        #     additional_info: Optional[Dict[str, Any]] = None
+        # ):
+        """ Updates an existing customer record. Pass in keywords to change. """
+        # if "name" in kwargs:
+        #     self.name = kwargs["name"]
+        # if "address" in kwargs:
+        #     self.address = kwargs["address"]
+        # if "address2" in kwargs:
+        #     self.address2 = kwargs["address2"]
+        # if "city" in kwargs:
+        #     self.city = kwargs["city"]
+        # if "state" in kwargs:
+        #     self.state = kwargs["state"]
+        # if "zip" in kwargs:
+        #     self.zip = kwargs["zip"]
+        # if "country" in kwargs:
+        #     self.country = kwargs["country"]
+        # if "email" in kwargs:
+        #     self.email = kwargs["email"]
+        # if "phone" in kwargs:
+        #     self.phone = kwargs["phone"]
+        # if "additional_info" in kwargs:
+        #     self.additional_info = kwargs["additional_info"]
+
+        return self.tbapi.post("/api/customer", self.json(by_alias=True), "Error updating customer")
+
+    # def cc(self):
+    #     self.update()
+
+
+class CustomerId(TbModel):
+    customer_id: Id = Field(alias="customerId")
+    public: bool
+    title: str
+
+    def __str__(self) -> str:
+        return f"CustomerId ({self.title}, {self.customer_id.id})"
+
+
 class Device(TbObject):
     id: Id
     additional_info: Optional[dict] = Field(alias="additionalInfo")
@@ -252,97 +344,6 @@ class Device(TbObject):
 
         return self.tbapi.delete(f"/api/plugins/telemetry/DEVICE/{self.id.id}/{scope.value}?keys={attributes}", f"Error deleting {scope.value} attributes for device '{self.id.id}'")
 
-
-class Customer(TbObject):
-    id: Id
-    title: Optional[str]
-    created_time: datetime = Field(alias="createdTime")
-    tenant_id: Id = Field(alias="tenantId")
-    name: Optional[str]
-    address: Optional[str]
-    address2: Optional[str]
-    city: Optional[str]
-    state: Optional[str]
-    zip: Optional[str]
-    country: Optional[str]
-    email: Optional[str]
-    phone: Optional[str]
-    additional_info: Optional[Dict] = Field(alias="additionalInfo")
-    # customer_id: Id = Field(alias="customerId")
-    # public: bool
-
-    def __str__(self) -> str:
-        return "Customer (" + str(self.title) + ", " + str(self.id.id) + ")"
-
-    def get_devices(self):
-        """
-        Returns a list of all devices associated with a customer
-        """
-        cust_id = self.id.id
-
-        return self.tbapi.get(f"/api/customer/{cust_id}/devices?limit=99999", f"Error retrieving devices for customer '{cust_id}'")["data"]
-
-    def delete(self):
-        """
-        Deletes the customer from the server
-        """
-        return self.tbapi.delete(f"/api/customer/{self.id.id}", f"Error deleting customer '{self.id.id}'")
-
-
-    def is_public(self) -> bool:
-        if not self.additional_info:
-            return False
-        # else
-        return self.additional_info.get("isPublic", False)
-
-
-    def update(self, **kwargs):  # dder: str
-        #     name: Optional[str] = None,
-        #     address: Optional[str] = None,
-        #     address2: Optional[str] = None,
-        #     city: Optional[str] = None,
-        #     state: Optional[str] = None,
-        #     zip: Optional[str] = None,
-        #     country: Optional[str] = None,
-        #     email: Optional[str] = None,
-        #     phone: Optional[str] = None,
-        #     additional_info: Optional[Dict[str, Any]] = None
-        # ):
-        """ Updates an existing customer record. Pass in keywords to change. """
-        # if "name" in kwargs:
-        #     self.name = kwargs["name"]
-        # if "address" in kwargs:
-        #     self.address = kwargs["address"]
-        # if "address2" in kwargs:
-        #     self.address2 = kwargs["address2"]
-        # if "city" in kwargs:
-        #     self.city = kwargs["city"]
-        # if "state" in kwargs:
-        #     self.state = kwargs["state"]
-        # if "zip" in kwargs:
-        #     self.zip = kwargs["zip"]
-        # if "country" in kwargs:
-        #     self.country = kwargs["country"]
-        # if "email" in kwargs:
-        #     self.email = kwargs["email"]
-        # if "phone" in kwargs:
-        #     self.phone = kwargs["phone"]
-        # if "additional_info" in kwargs:
-        #     self.additional_info = kwargs["additional_info"]
-
-        return self.tbapi.post("/api/customer", self.json(by_alias=True), "Error updating customer")
-
-    # def cc(self):
-    #     self.update()
-
-
-class CustomerId(TbModel):
-    customer_id: Id = Field(alias="customerId")
-    public: bool
-    title: str
-
-    def __str__(self) -> str:
-        return f"CustomerId ({self.title}, {self.customer_id.id})"
 
 
 T = TypeVar("T", Customer, Device)
