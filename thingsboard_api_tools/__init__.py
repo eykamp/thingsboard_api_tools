@@ -308,8 +308,7 @@ class Device(TbObject):
         Returns a list of the device's attributes in the specified scope.
         Looks like [{'key': 'active', 'lastUpdateTs': 1595969455329, 'value': False}, ...]
         """
-        x = self.tbapi.get(f"/api/plugins/telemetry/DEVICE/{self.id.id}/values/attributes/{scope.value}", f"Error retrieving {scope.value} attributes for '{self.id.id}'")
-        return x    # for debugging purposes
+        return self.tbapi.get(f"/api/plugins/telemetry/DEVICE/{self.id.id}/values/attributes/{scope.value}", f"Error retrieving {scope.value} attributes for '{self.id.id}'")
 
 
     # setting attributes to the server
@@ -1425,6 +1424,8 @@ device.assign_to(customer)
 assert device.get_customer().id == customer.id
 device = get_test_device()  # Get it again to make sure changes stuck
 assert device.get_customer().id == customer.id
+
+# Just make sure these work... more detailed tests below
 assert device.get_telemetry_keys()
 assert device.get_telemetry(device.get_telemetry_keys()[:3])
 
