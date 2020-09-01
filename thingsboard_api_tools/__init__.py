@@ -181,21 +181,26 @@ class Device(TbObject):
         return self.tbapi.delete(f"/api/device/{self.id.id}", f"Error deleting device '{self.id.id}'")
 
 
+    def assign_to(self, customer: Customer) -> None:
+        if device.customer_id != customer.id:
+            obj = self.tbapi.post(f"/api/customer/{customer.id.id}/device/{self.id.id}", None, f"Error assigning device '{self.id.id}' to customer {customer}")
+            self.customer_id = Id(**obj["customerId"])
+
+
     def get_customer(self) -> Customer:
         """ Returns the customer assigned to the device """
         return self.tbapi.get_customer_by_id(self.customer_id)
 
 
-    def assign_to_public_user(self):
-        """ Returns a new device that is assigned to the public customer. Use device = device.assign_to_public_user() """
-        # same functionality as:
-        # self.customer_id.id = self.tbapi.get_public_user_id()
-        # return
+    def make_public(self) -> None:
+        """ Assigns device to the public customer, which is how TB makes devices public. """
 
-        return Device(self.tbapi, **self.tbapi.post(f"/api/customer/public/device/{self.id.id}", None, f"Error assigning device '{self.id.id}' to public customer"))
+        if not self.is_public():
+            obj = self.tbapi.post(f"/api/customer/public/device/{self.id.id}", None, f"Error assigning device '{self.id.id}' to public customer")
+            self.customer_id = Id(**obj["customerId"])
 
 
-    def is_public(self):
+    def is_public(self) -> bool:
         """ Return True if device is owned by the public user, False otherwise """
         pub_id = self.tbapi.get_public_user_id()
         return self.customer_id.id == pub_id
@@ -564,6 +569,7 @@ class TbApi:
         self.token = None
 
         self.verbose = False
+        self.public_user_id = None
 
 
     def get_token(self) -> str:
@@ -618,11 +624,14 @@ class TbApi:
     #     return self.get(f"/api/customer/{cust_id}/devices?limit=99999", f"Error retrieving devices for customer '{cust_id}'")["data"]
 
 
-    def get_public_user_id(self):
+    def get_public_user_id(self) -> str:
         """
         Returns UUID of public customer, or None if there is none
         """
-        return self.get_user_uuid("Public")
+        if not self.public_user_id:
+            self.public_user_id = self.get_user_uuid("Public")
+
+        return self.public_user_id
 
 
     # TODO: ???
@@ -1257,10 +1266,19 @@ from requests.exceptions import HTTPError
 print("Loading data...", end=None)
 tbapi = TbApi(mothership_url, thingsboard_username, thingsboard_password)
 
-device = tbapi.get_device_by_name("Birdhouse 001")  # redundant (repeated below)
+def get_test_device() -> Device:
+    device = tbapi.get_device_by_name("Birdhouse 001")
+    assert device
+    return device
+
+
+device = get_test_device()  # redundant (repeated below)
 customer = tbapi.get_customer_by_name("Birdhouse 001")  # redundant (repeated below)
 dash = tbapi.get_dashboard_by_name("Birdhouse 001 Dash")
 dash_def = tbapi.get_dashboard_definition("0d538a70-d996-11e7-a394-bf47d8c29be7")
+
+assert customer
+assert dash
 
 # Validate the EntityType enum
 assert device.id.entity_type == EntityType.DEVICE.value
@@ -1334,7 +1352,7 @@ attrs2 = device.get_attributes(AttributeScope.CLIENT)
 assert attrs1 == attrs2
 assert len(attrs1) > 0
 
-assert device.get_customer().id.entity_type == EntityType.CUSTOMER
+assert device.get_customer().id.entity_type == EntityType.CUSTOMER.value
 
 
 # Set/retrieve/delete attributes
@@ -1372,6 +1390,23 @@ test_attributes(device, AttributeScope.SERVER)
 test_attributes(device, AttributeScope.SHARED)
 # test_attributes(device, AttributeScope.CLIENT) # TODO: should setting and getting in the Client scope work?
 
+# Device ownership
+device.assign_to(customer)
+assert not device.is_public()
+device = get_test_device()  # Get it again to make sure changes stuck
+assert not device.is_public()
+
+assert device.get_customer().id == customer.id
+device.make_public()
+assert device.is_public()
+device = get_test_device()  # Get it again to make sure changes stuck
+assert device.is_public()
+
+assert device.get_customer().id != customer.id
+device.assign_to(customer)
+assert device.get_customer().id == customer.id
+device = get_test_device()  # Get it again to make sure changes stuck
+assert device.get_customer().id == customer.id
 
 print(" done with first round of tests.")
 
