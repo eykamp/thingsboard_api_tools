@@ -220,27 +220,23 @@ class Device(TbObject):
     # http://www.sensorbot.org:8080/swagger-ui.html#!/telemetry-controller/deleteEntityTimeseriesUsingDELETE
 
 
-    def get_telemetry(self, telemetry_keys: Union[str, Iterable[str]], startTime: int = None, endTime: int = None, interval: int = None, limit: int = None, agg: Aggregation = None):
-        """ Pass a single key, a stringified comma-separate list, a list object, or a tuple """
+    def get_telemetry(
+        self,
+        telemetry_keys: Union[str, Iterable[str]],
+        startTime: int = 0,
+        endTime: int = int(time.time() * 1000),     # Unix timestamp, now, convert to milliseconds
+        interval: int = 60 * 1000,                  # 1 minute
+        limit: int = 100,
+        agg: Aggregation = Aggregation.NONE
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Pass a single key, a stringified comma-separate list, a list object, or a tuple
+        Note: Returns a sane amount of data by default, in same shape as get_latest_telemetry()
+        """
         if isinstance(telemetry_keys, str):
             keys = telemetry_keys
         else:
             keys = ",".join(telemetry_keys)
-
-        if startTime is None:
-            startTime = 0
-
-        if endTime is None:
-            endTime = int(time.time() * 1000)       # Unix timestamp, now, convert to milliseconds
-
-        if interval is None:
-            interval = 60 * 1000   # 1 minute, in ms
-
-        if limit is None:
-            limit = 100
-
-        if agg is None:
-            agg = Aggregation.NONE
 
         params = f"/api/plugins/telemetry/DEVICE/{self.id.id}/values/timeseries?keys={keys}&startTs=" + \
                  f"{int(startTime)}&endTs={int(endTime)}&interval={interval}&limit={limit}&agg={agg.value}"
@@ -250,7 +246,7 @@ class Device(TbObject):
         return self.tbapi.get(params, error_message)
 
 
-    def send_telemetry(self, device_token: str, data: Dict[str, Any], timestamp: int = 0):
+    def send_telemetry(self, data: Dict[str, Any], timestamp: int = 0):
         """ Note that this requires the device's secret token as the first argument """
         if not data:
             return
@@ -263,12 +259,17 @@ class Device(TbObject):
         return self.tbapi.post(f"/api/v1/{device_token}/telemetry", str(data), f"Error sending telemetry for device with token '{device_token}'")
 
 
-    def get_telemetry_keys(self):
+    def get_telemetry_keys(self) -> List[str]:
         return self.tbapi.get(f"/api/plugins/telemetry/DEVICE/{self.id.id}/keys/timeseries", f"Error retrieving telemetry keys for device '{self.id.id}'")
 
 
-    def get_latest_telemetry(self, telemetry_keys: List[str]):
-        """ Pass a single key, a stringified comma-separate list, a list object, or a tuple """
+    def get_latest_telemetry(self, telemetry_keys: List[str]) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Pass a single key, a stringified comma-separate list, a list object, or a tuple
+        get_latest_telemetry(['datum_1', 'datum_2']) ==>
+            {'datum_1': [{'ts': 1595897301000, 'value': '555'}], 'datum_2': [{'ts': 1595897301000, 'value': '666'}]}
+
+        """
         if isinstance(telemetry_keys, str):
             keys = telemetry_keys
         else:
@@ -1424,6 +1425,8 @@ device.assign_to(customer)
 assert device.get_customer().id == customer.id
 device = get_test_device()  # Get it again to make sure changes stuck
 assert device.get_customer().id == customer.id
+assert device.get_telemetry_keys()
+assert device.get_telemetry(device.get_telemetry_keys()[:3])
 
 print(" done with first round of tests.")
 
@@ -1437,7 +1440,7 @@ device = tbapi.add_device("Device Test Subject", "Guinea Pig", shared_attributes
 assert(isinstance(device.get_customer(), str)) # should be a guid
 token = device.get_token()
 assert(isinstance(token, str))
-assert(len(token) == 20) # maybe?
+assert(len(token) == 20)
 
 # Customer tests
 print("now testing customers")
@@ -1566,8 +1569,8 @@ expected_telemetry = {}
 expected_latest_telemetry = {}
 
 
-def test_sending_telemetry(device: Device, token: str, data_index: int, timestamp_index: int):
-    device.send_telemetry(token, {keys[data_index]: values[data_index]}, timestamp=timestamps[timestamp_index])
+def test_sending_telemetry(device: Device, data_index: int, timestamp_index: int):
+    device.send_telemetry({keys[data_index]: values[data_index]}, timestamp=timestamps[timestamp_index])
     if keys[data_index] not in expected_tel_keys:
         expected_tel_keys.append(keys[data_index])
     tel_keys = device.get_telemetry_keys()
@@ -1586,9 +1589,9 @@ def test_sending_telemetry(device: Device, token: str, data_index: int, timestam
     assert(latest_telemetry == expected_latest_telemetry)
 
 
-test_sending_telemetry(device, token, 0, 0)
-test_sending_telemetry(device, token, 1, 0)
-test_sending_telemetry(device, token, 0, 1)
+test_sending_telemetry(device, 0, 0)
+test_sending_telemetry(device, 1, 0)
+test_sending_telemetry(device, 0, 1)
 
 
 # for tel_key in tel_keys:
