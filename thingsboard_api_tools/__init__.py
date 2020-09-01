@@ -39,6 +39,15 @@ class EntityType(Enum):
     DEVICE = "DEVICE"
 
 
+class Aggregation(Enum):
+    MIN = "MIN"
+    MAX = "MAX"
+    AVG = "AVG"
+    SUM = "SUM"
+    COUNT = "COUNT"
+    NONE = "NONE"
+
+
 class TbModel(BaseModel):
     class Config:
         json_encoders = {
@@ -211,7 +220,7 @@ class Device(TbObject):
     # http://www.sensorbot.org:8080/swagger-ui.html#!/telemetry-controller/deleteEntityTimeseriesUsingDELETE
 
 
-    def get_telemetry(self, telemetry_keys, startTime=None, endTime=None, interval=None, limit=None, agg=None):
+    def get_telemetry(self, telemetry_keys: Union[str, Iterable[str]], startTime: int = None, endTime: int = None, interval: int = None, limit: int = None, agg: Aggregation = None):
         """ Pass a single key, a stringified comma-separate list, a list object, or a tuple """
         if isinstance(telemetry_keys, str):
             keys = telemetry_keys
@@ -231,12 +240,12 @@ class Device(TbObject):
             limit = 100
 
         if agg is None:
-            agg = "NONE"   # MIN, MAX, AVG, SUM, COUNT, NONE
+            agg = Aggregation.NONE
 
-        params = "/api/plugins/telemetry/DEVICE/" + self.id.id + "/values/timeseries?keys=" + keys + "&startTs=" + \
-            str(int(startTime)) + "&endTs=" + str(int(endTime)) + "&interval=" + str(interval) + "&limit=" + str(limit) + "&agg=" + agg
+        params = f"/api/plugins/telemetry/DEVICE/{self.id.id}/values/timeseries?keys={keys}&startTs=" + \
+                 f"{int(startTime)}&endTs={int(endTime)}&interval={interval}&limit={limit}&agg={agg.value}"
 
-        error_message = "Error retrieving telemetry for device '" + self.id.id + "' with date range '" + str(int(startTime)) + "-" + str(int(endTime)) + "' and keys '" + keys + "'"
+        error_message = f"Error retrieving telemetry for device '{self}' with date range '{startTime}-{endTime}' and keys '{keys}'"
 
         return self.tbapi.get(params, error_message)
 
