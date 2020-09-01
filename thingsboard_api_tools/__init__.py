@@ -204,9 +204,12 @@ class Device(TbObject):
         return self.customer_id.id == pub_id
 
 
-    # not suppported
+    # TODO: Fix
     # def delete_telemetry(self, key, timestamp):
     #     return self.tbapi.delete(f"/api/plugins/telemetry/DEVICE/{self.id.id}/timeseries/values?key={key}&ts={str(int(timestamp))}", f"Error deleting telemetry for device '{self.id.id}'")
+    # From swagger: /api/plugins/telemetry/{entityType}/{entityId}/timeseries/delete{?keys,deleteAllDataForKeys,startTs,endTs,rewriteLatestIfDeleted}
+    # http://www.sensorbot.org:8080/swagger-ui.html#!/telemetry-controller/deleteEntityTimeseriesUsingDELETE
+
 
     def get_telemetry(self, telemetry_keys, startTime=None, endTime=None, interval=None, limit=None, agg=None):
         """ Pass a single key, a stringified comma-separate list, a list object, or a tuple """
