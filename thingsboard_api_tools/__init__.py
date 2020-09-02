@@ -59,7 +59,8 @@ class TbModel(BaseModel):
 
 
 class TbObject(TbModel):
-    __slots__ = ["tbapi"]   # Use __slots__ to hide field from pydantic
+    __slots__ = ["tbapi"]   # Use __slots__ to hide field from pydantic; but they still need to have their types declared.
+    tbapi: "TbApi"          # See https://stackoverflow.com/questions/52553143/slots-type-annotations-for-python-pycharm
 
     def __init__(self, tbapi: "TbApi", *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -92,6 +93,7 @@ class Customer(TbObject):
 
     def __str__(self) -> str:
         return "Customer (" + str(self.title) + ", " + str(self.id.id) + ")"
+
 
     def get_devices(self):
         """
