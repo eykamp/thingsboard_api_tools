@@ -1,5 +1,4 @@
-
 *.pyc
-
-.vscode/
+launch.json
+settings.json
 thingsboard_api_tools/config.py
