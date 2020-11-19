@@ -23,7 +23,7 @@ import time
 from http import HTTPStatus
 from typing import  Optional, Dict, List, Any, Union, Type, Iterable, TypeVar
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field       # pip install pydantic
 from enum import Enum
 
 
@@ -60,11 +60,17 @@ class TbModel(BaseModel):
 
 class TbObject(TbModel):
     __slots__ = ["tbapi"]   # Use __slots__ to hide field from pydantic; but they still need to have their types declared.
-    tbapi: "TbApi"          # See https://stackoverflow.com/questions/52553143/slots-type-annotations-for-python-pycharm
+    #                       # See https://stackoverflow.com/questions/52553143/slots-type-annotations-for-python-pycharm
 
     def __init__(self, tbapi: "TbApi", *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        # type: (TbApi, Any, Any) -> None
+        super().__init__(*args, **kwargs)       # value is not a valid dict (type=type_error.dict)
+
         object.__setattr__(self, "tbapi", tbapi)
+
+    def __type_hints__(self, tbapi: "TbApi"):
+        """ Dummy method to annotate the instance attribute types """
+        self.tbapi = tbapi
 
 
 class Id(TbModel):
@@ -73,6 +79,16 @@ class Id(TbModel):
 
     def __str__(self) -> str:
         return f"Id ({self.entity_type}, {self.id})"
+
+
+class CustomerId(TbModel):
+    """ This is an Id with couple of extra fields. """
+    id: Id = Field(alias="customerId")
+    public: bool
+    title: str
+
+    def __str__(self) -> str:
+        return f"CustomerId ({'PUBLIC' if self.public else self.title + ' ,' + self.id.id})"
 
 
 class Customer(TbObject):
@@ -95,17 +111,23 @@ class Customer(TbObject):
         return "Customer (" + str(self.title) + ", " + str(self.id.id) + ")"
 
 
+    @property
+    def customer_id(self) -> CustomerId:
+        obj = {"customerId": self.id, "public": self.is_public(), "title": self.title}
+        return CustomerId(**obj)
+
+
     def get_devices(self):
         """
         Returns a list of all devices associated with a customer
         """
         cust_id = self.id.id
 
-        return self.tbapi.get(f"/api/customer/{cust_id}/devices?limit=99999", f"Error retrieving devices for customer '{cust_id}'")["data"]
+        return self.tbapi.get(f"/api/customer/{cust_id}/devices?pageSize=99999&page=0", f"Error retrieving devices for customer '{cust_id}'")["data"]
 
-    def delete(self):
+    def delete(self) -> bool:
         """
-        Deletes the customer from the server
+        Deletes the customer from the server, returns True if customer was deleted, False if it did not exist
         """
         return self.tbapi.delete(f"/api/customer/{self.id.id}", f"Error deleting customer '{self.id.id}'")
 
@@ -157,15 +179,6 @@ class Customer(TbObject):
     #     self.update()
 
 
-class CustomerId(TbModel):
-    customer_id: Id = Field(alias="customerId")
-    public: bool
-    title: str
-
-    def __str__(self) -> str:
-        return f"CustomerId ({self.title}, {self.customer_id.id})"
-
-
 class Device(TbObject):
     id: Id
     additional_info: Optional[dict] = Field(alias="additionalInfo")
@@ -177,12 +190,21 @@ class Device(TbObject):
     created_time: datetime = Field(alias="createdTime")
 
     __slots__ = ["device_token"]
-    # device_token: str # = None     # call self.get_token() to retrieve and cache the device token from the server
+
+    def __type_hints__(self, device_token: str):
+        """ Dummy method to annotate the instance attribute types """
+        self.device_token = device_token
+
 
     def __init__(self, *args, **kwargs):
+        """ Create an initializer to handle our slot fields; other fields handled automatically by Pydantic. """
         super().__init__(*args, **kwargs)
-        object.__setattr__(self, "device_token", None)
+        object.__setattr__(self, "device_token", None)  # type: str
         pass
+
+
+    def __str__(self):
+        return f"{self.id}/{self.name}"
 
 
     def delete(self) -> bool:
@@ -203,7 +225,6 @@ class Device(TbObject):
 
     def make_public(self) -> None:
         """ Assigns device to the public customer, which is how TB makes devices public. """
-
         if not self.is_public():
             obj = self.tbapi.post(f"/api/customer/public/device/{self.id.id}", None, f"Error assigning device '{self.id.id}' to public customer")
             self.customer_id = Id(**obj["customerId"])
@@ -249,23 +270,20 @@ class Device(TbObject):
 
 
     def send_telemetry(self, data: Dict[str, Any], timestamp: int = 0):
-        """ Note that this requires the device's secret token as the first argument """
         if not data:
             return
-
-        device_token = self.get_token()
 
         if timestamp:
             data = {"ts": timestamp, "values": data}
 
-        return self.tbapi.post(f"/api/v1/{device_token}/telemetry", str(data), f"Error sending telemetry for device with token '{device_token}'")
+        return self.tbapi.post(f"/api/v1/{self.token}/telemetry", data, f"Error sending telemetry for device '{self.name}'")
 
 
     def get_telemetry_keys(self) -> List[str]:
         return self.tbapi.get(f"/api/plugins/telemetry/DEVICE/{self.id.id}/keys/timeseries", f"Error retrieving telemetry keys for device '{self.id.id}'")
 
 
-    def get_latest_telemetry(self, telemetry_keys: List[str]) -> Dict[str, List[Dict[str, Any]]]:
+    def get_latest_telemetry(self, telemetry_keys: Union[str, List[str]]) -> Dict[str, List[Dict[str, Any]]]:
         """
         Pass a single key, a stringified comma-separate list, a list object, or a tuple
         get_latest_telemetry(['datum_1', 'datum_2']) ==>
@@ -280,12 +298,12 @@ class Device(TbObject):
         return self.tbapi.get(f"/api/plugins/telemetry/DEVICE/{self.id.id}/values/timeseries?keys={keys}", f"Error retrieving latest telemetry for device '{self.id.id}' with keys '{keys}'")
 
 
-    def get_token(self) -> str:
-        """ Returns the device's secret token from the server and caches it """
+    @property
+    def token(self) -> str:
+        """ Returns the device's secret token from the server and caches it for reuse. """
         if self.device_token is None:
-            obj = self.tbapi.get(f"/api/device/{self.id.id}/credentials", f"Error retreiving device_key for device '{self.id.id}'")
-            object.__setattr__(self, "device_token", obj["credentialsId"])
-            # self.device_token = obj["credentialsId"]
+            obj = self.tbapi.get(f"/api/device/{self.id.id}/credentials", f"Error retreiving device_key for device '{self}'")
+            object.__setattr__(self, "device_token", obj["credentialsId"])     # self.device_token = ... won't work with __slot__ attribute
         return self.device_token
 
 
@@ -314,28 +332,28 @@ class Device(TbObject):
 
 
     # setting attributes to the server
-    def set_server_attributes(self, attributes: Dict[str, Any]):
+    def set_server_attributes(self, attributes: Dict[str, Any]) -> Dict[str, Any]:
         """
         Posts the attributes provided (use dict format) to the server in the Server scope
         """
         return self.set_attributes(attributes, AttributeScope.SERVER)
 
 
-    def set_shared_attributes(self, attributes: Dict[str, Any]):
+    def set_shared_attributes(self, attributes: Dict[str, Any]) -> Dict[str, Any]:
         """
         Posts the attributes provided (use dict format) to the server in the Shared scope
         """
         return self.set_attributes(attributes, AttributeScope.SHARED)
 
 
-    def set_client_attributes(self, attributes: Dict[str, Any]):
+    def set_client_attributes(self, attributes: Dict[str, Any]) -> Dict[str, Any]:
         """
         Posts the attributes provided (use dict format) to the server in the Client scope
         """
         return self.set_attributes(attributes, AttributeScope.CLIENT)
 
 
-    def set_attributes(self, attributes: Dict[str, Any], scope: AttributeScope):
+    def set_attributes(self, attributes: Dict[str, Any], scope: AttributeScope) -> Dict[str, Any]:  # Always seems to be empty {}
         """ Posts the attributes provided (use dict format) to the server at a specified scope """
         return self.tbapi.post(f"/api/plugins/telemetry/DEVICE/{self.id.id}/{scope.value}", attributes, f"Error setting {scope.value} attributes for device '{self.id.id}'")
 
@@ -346,22 +364,22 @@ class Device(TbObject):
 
 
     # deleting attributes from the server
-    def delete_server_attributes(self, attributes: Dict[str, Any]):
+    def delete_server_attributes(self, attributes: Union[str, Iterable[str]]) -> bool:
         """ Pass an attribute name or a list of attributes to be deleted from the specified scope """
         return self.delete_attributes(attributes, AttributeScope.SERVER)
 
 
-    def delete_shared_attributes(self, attributes: Dict[str, Any]):
+    def delete_shared_attributes(self, attributes: Union[str, Iterable[str]]) -> bool:
         """ Pass an attribute name or a list of attributes to be deleted from the specified scope """
         return self.delete_attributes(attributes, AttributeScope.SHARED)
 
 
-    def delete_client_attributes(self, attributes: Union[str, Iterable[str]]):
+    def delete_client_attributes(self, attributes: Union[str, Iterable[str]]) -> bool:
         """ Pass an attribute name or a list of attributes to be deleted from the specified scope """
         return self.delete_attributes(attributes, AttributeScope.CLIENT)
 
 
-    def delete_attributes(self, attributes: Union[str, Iterable[str]], scope: AttributeScope):
+    def delete_attributes(self, attributes: Union[str, Iterable[str]], scope: AttributeScope) -> bool:
         """ Pass an attribute name or a list of attributes to be deleted from the specified scope """
         if isinstance(attributes, Iterable) and not isinstance(attributes, str):
             attributes = ",".join(attributes)
@@ -401,10 +419,11 @@ class Widget(TbModel):
     size_x: int = Field(alias="sizeX")
     size_y: int = Field(alias="sizeY")
     config: dict
-    # index: str
+    # index: str        # TODO: Put in slots?
 
     def __str__(self) -> str:
-        return f"Widget ({self.title}, {self.type}, {self.index})"
+        return f"Widget ({self.title}, {self.type})"
+        # return f"Widget ({self.title}, {self.type}, {self.index})"
 
 
 class SubWidget(TbModel):      # used within States <- Layouts <- Main <- Widgets
@@ -413,9 +432,10 @@ class SubWidget(TbModel):      # used within States <- Layouts <- Main <- Widget
     mobile_height: Optional[int] = Field(alias="mobileHeight")
     row: int
     col: int
-    # index: str
+    # index: str        # TODO: Put in slots?
 
     def __str__(self) -> str:
+        return f"SubWidget"
         return f"SubWidget ({self.index})"
 
 
@@ -447,10 +467,11 @@ class State(TbModel):      # referred to in "default", the only object nested in
     root: bool
     layouts: Dict[str, Layout]
     # widgets: list   # skipping the step of going through widgets, this is the same as self.layouts["main"].widgets
-    # index: str
+    # index: str    # TODO: Put in slots?
 
     def __str__(self) -> str:
-        return f"State ({self.index} {self.name})"
+        return f"State ({self.name})"
+        # return f"State ({self.index} {self.name})"
 
 
 class Filter(TbModel):
@@ -531,10 +552,12 @@ class Dashboard(TbObject):
     tenant_id: Id = Field(alias="tenantId")
     name: Optional[str]
     title: Optional[str]
-    assigned_customers: List[CustomerId] = Field(alias="assignedCustomers")
+    assigned_customers: Optional[List[CustomerId]] = Field(alias="assignedCustomers")
+
 
     def __str__(self) -> str:
         return f"Dashboard ({self.name}, {self.title}, {self.id.id})"
+
 
     def is_public(self) -> bool:
         """
@@ -550,12 +573,72 @@ class Dashboard(TbObject):
         return False
 
 
+    def assign_to_user(self, customer: Customer):
+        """
+        Returns dashboard definition
+        """
+        dashboard_id = self.id.id
+        customer_id = customer.id.id
+        return self.tbapi.post(f"/api/customer/{customer_id}/dashboard/{dashboard_id}", None, f"Could not assign dashboard '{dashboard_id}' to customer '{customer_id}'")
+
+
+    # def make_public(self) -> None:
+    #     """ Assigns device to the public customer, which is how TB makes devices public. """
+    #     if not self.is_public():
+    #         obj = self.tbapi.post(f"/api/customer/public/device/{self.id.id}", None, f"Error assigning device '{self.id.id}' to public customer")
+    #         self.customer_id = Id(**obj["customerId"])
+
+
+    # def is_public(self) -> bool:
+    #     """ Return True if device is owned by the public user, False otherwise """
+    #     pub_id = self.tbapi.get_public_user_id()
+    #     return self.customer_id == pub_id
+
+    def make_public(self) -> None:
+        """ Assigns device to the public customer, which is how TB makes things public. """
+        if not self.is_public():
+            obj = self.tbapi.post(f"/api/customer/public/dashboard/{self.id.id}", None, f"Error assigning dash '{self.id.id}' to public customer")
+            # self.customer_id = Id(**obj["customerId"])
+            self.assigned_customers = [self.tbapi.get_public_user_id()]
+
+
+    def get_public_url(self) -> Optional[str]:
+        if not self.is_public():
+            return None
+
+        dashboard_id = self.id.id
+        public_id = self.tbapi.get_public_user_id().id.id
+
+        return f"{self.tbapi.mothership_url}/dashboard/{dashboard_id}?publicId={public_id}"
+
+
+    def get_definition(self) -> "DashboardDef":
+        dash_id = self.id.id
+        obj = self.tbapi.get(f"/api/dashboard/{dash_id}", f"Error retrieving dashboard definition for '{dash_id}'")
+        return DashboardDef(self.tbapi, **obj)
+
+
+    def delete(self) -> bool:
+        """
+        Returns True if dashboard was deleted, False if it did not exist
+        """
+        dashboard_id = self.id.id
+        return self.tbapi.delete(f"/api/dashboard/{dashboard_id}", f"Error deleting dashboard '{dashboard_id}'")
+
+
 class DashboardDef(Dashboard):
     """ Extends Dashboard by adding a configuration. """
     configuration: Configuration
 
     def __str__(self) -> str:
         return f"Dashboard Definition ({self.name}, {self.title}, {self.id.id})"
+
+
+    def delete_server_attributes(self):
+        """
+        Saves a fully formed dashboard definition
+        """
+        return self.tbapi.post("/api/dashboard", self.json(by_alias=True), "Error saving dashboard")
 
 
 class TbObjectType(Enum):
@@ -572,7 +655,7 @@ class TbApi:
         """ Given a list of json strings and a type, return a list of rehydrated objects of that type. """
         objects = []
         for jsn in json_list:
-            objects.append(object_type(tbapi, **jsn))
+            objects.append(object_type(self, **jsn))
         return objects
 
 
@@ -617,21 +700,21 @@ class TbApi:
         """
         Return a list of all customers in the system
         """
-        return self.get("/api/customers?limit=99999", "Error retrieving customers")["data"]
+        return self.get("/api/customers?pageSize=99999&page=0", "Error retrieving customers")["data"]
 
 
     def get_tenant_assets(self):
         """
         Returns a list of all assets for current tenant
         """
-        return self.get("/api/tenant/assets?limit=99999", "Error retrieving assets for tenant")["data"]
+        return self.get("/api/tenant/assets?pageSize=99999&page=0", "Error retrieving assets for tenant")["data"]
 
 
     def get_tenant_devices(self):
         """
         Returns a list of all devices for current tenant
         """
-        return self.get("/api/tenant/devices?limit=99999", "Error retrieving devices for tenant")["data"]
+        return self.get("/api/tenant/devices?pageSize=99999&page=0", "Error retrieving devices for tenant")["data"]
 
 
     # def get_customer_devices(self, cust):
@@ -640,24 +723,24 @@ class TbApi:
     #     """
     #     cust_id = self.get_id(cust)
 
-    #     return self.get(f"/api/customer/{cust_id}/devices?limit=99999", f"Error retrieving devices for customer '{cust_id}'")["data"]
+    #     return self.get(f"/api/customer/{cust_id}/devices?pageSize=99999&page=0", f"Error retrieving devices for customer '{cust_id}'")["data"]
 
 
-    def get_public_user_id(self) -> Id:
+    def get_public_user_id(self) -> CustomerId:
         """
-        Returns UUID of public customer, or None if there is none
+        Returns Id of public customer, or None if there is none.  Caches value for future use.
         """
         if not self.public_user_id:
-            self.public_user_id = self.get_customer_by_name("Public").id
+            self.public_user_id = self.get_customer_by_name("Public").customer_id
 
         return self.public_user_id
 
 
-    def add_customer(self, name, address, address2, city, state, zip, country, email, phone, additional_info=None):
+    def add_customer(self, name: str, address: str, address2: str, city: str, state: str, zip: str, country: str, email: str, phone: str, additional_info: Optional[Dict[str, str]] = None) -> Customer:
         """
         Adds customer and returns JSON customer from database
         """
-        data = {
+        data: Dict[str, Any] = {
             "title": name,
             "address": address,
             "address2": address2,
@@ -672,7 +755,13 @@ class TbApi:
         if additional_info is not None:
             data["additionalInfo"] = additional_info
 
-        return self.post("/api/customer", data, f"Error adding customer '{name}'")
+        obj = self.post("/api/customer", data, f"Error adding customer '{name}'")
+
+        if isinstance(obj["additionalInfo"], str):
+            obj["additionalInfo"] = json.loads(obj["additionalInfo"])
+            print(">>> Converting!")        # If we never see this, maybe we can delete this block?
+
+        return Customer(self, **obj)
 
 
     # def delete_customer_by_id(self, id):
@@ -694,85 +783,42 @@ class TbApi:
     #     return self.delete_customer_by_id(id)
 
 
-    # TODO: Move to Dashboard.assign_to_customer(Customer)
-    def assign_dash_to_user(self, dash: Dashboard, customer: Customer):
+    def create_dashboard(self, dash_name: str, dash_def: DashboardDef, id: Optional[Id] = None) -> DashboardDef:
         """
-        Returns dashboard definition
-        """
-        dashboard_id = dash.id.id
-        customer_id = customer.id.id
-        return self.post(f"/api/customer/{customer_id}/dashboard/{dashboard_id}", None, f"Could not assign dashboard '{dashboard_id}' to customer '{customer_id}'")
-
-
-    # TODO: Move to Dashboard.assign_to_public_user()   or   Dashboard.assign_to_customer(get_public_user())   ???
-    def assign_dash_to_public_user(self, dash: Dashboard):
-        """
-        Pass in a dash or a dash_id
-        """
-        dash_id = dash.id.id
-        return self.post(f"/api/customer/public/dashboard/{dash_id}", None, f"Error assigning dash '{dash_id}' to public customer")
-
-
-    # TODO: Move to Dashboard.get_public_url()
-    def get_public_dash_url(self, dash: Dashboard) -> Optional[str]:
-
-        if not dash.is_public():
-            return None
-
-        dashboard_id = dash.id.id
-        public_id = self.get_public_user_id()
-
-        return f"{self.mothership_url}/dashboard/{dashboard_id}?publicId={public_id.id}"
-
-
-    # TODO: Move to Dashboard.delete()
-    def delete_dashboard(self, dash: Dashboard) -> bool:
-        """
-        Returns True if dashboard was deleted, False if it did not exist
-        """
-        dashboard_id = dash.id.id
-        return self.delete(f"/api/dashboard/{dashboard_id}", f"Error deleting dashboard '{dashboard_id}'")
-
-
-    # TODO: ???
-    def create_dashboard_for_customer(self, dash_name, dash_def):
-        """
-        Returns dashboard definition
+        Returns DashboardDef
         """
         data = {
-            "configuration": dash_def["configuration"],
+            "configuration": dash_def.configuration.dict(by_alias=True),
             "title": dash_name,
-            "name": dash_name
+            "name": dash_name,
         }
 
+        # Add an id if we have one; if we use the id of an existing dash, it will be overwritten
+        if id:
+            data["id"] = id.dict(by_alias=True)
+
         # Update the configuration
-        return self.post("/api/dashboard", data, "Error creating new dashboard")
-
-
-    # TODO: Move to Dashboard.save()
-    def save_dashboard(self, dash_def):
-        """
-        Saves a fully formed dashboard definition
-        """
-        return self.post("/api/dashboard", dash_def, "Error saving dashboard")
+        obj = self.post("/api/dashboard", data, "Error creating new dashboard")
+        # obj["configuration"] = json.loads(obj["configuration"])     # We need to hydrate this string for the parser to work
+        return DashboardDef(self, **obj)
 
 
     def get_dashboards_by_name(self, dash_name_prefix: str) -> List[Dashboard]:
         """
-        Returns a list of all dashes starting with the specified name
+        Returns a list of all dashes starting with the specified name.
         """
-        objs = self.get(f"/api/tenant/dashboards?limit=99999&textSearch={dash_name_prefix}", f"Error retrieving dashboards starting with '{dash_name_prefix}'")["data"]
+        objs = self.get(f"/api/tenant/dashboards?pageSize=99999&page=0&textSearch={dash_name_prefix}", f"Error retrieving dashboards starting with '{dash_name_prefix}'")["data"]
 
         dashes = list()
 
         for obj in objs:
-            dashes.append(Dashboard(tbapi, **obj))
+            dashes.append(Dashboard(self, **obj))
 
         return dashes
 
 
     def get_dashboard_by_name(self, dash_name: str) -> Optional[Dashboard]:
-        """ Returns dashboard with specified name, or None if we can't find one """
+        """ Returns dashboard with specified name, or None if we can't find one. """
         dashes = self.get_dashboards_by_name(dash_name)
         for dash in dashes:
             if dash.title == dash_name:
@@ -783,7 +829,7 @@ class TbApi:
 
     def get_dashboard_by_id(self, dash_id: Union[Id, str]) -> Dashboard:
         """
-        Retrieve dashboard by id
+        Retrieve dashboard by id.
         """
         if isinstance(dash_id, Id):
             dash_id = dash_id.id
@@ -791,12 +837,6 @@ class TbApi:
 
         obj = self.get(f"/api/dashboard/info/{dash_id}", f"Error retrieving dashboard for '{dash_id}'")
         return Dashboard(self, **obj)
-
-
-    # TODO: Move to Dashboard.get_definition()
-    def get_dashboard_definition(self, dash_guid: Union[Id, str]) -> DashboardDef:
-        obj = self.get(f"/api/dashboard/{dash_guid}", f"Error retrieving dashboard definition for '{dash_guid}'")
-        return DashboardDef(tbapi, **obj)
 
 
     def get_customer_by_id(self, cust_id: Union[Id, str]) -> Customer:
@@ -808,16 +848,23 @@ class TbApi:
         # otherwise, assume cust_id is a guid
 
         obj = self.get(f"/api/customer/{cust_id}", f"Could not retrieve Customer with id '{cust_id}'")
-        return Customer(tbapi, **obj)
+        return Customer(self, **obj)
 
 
     def get_customers_by_name(self, cust_name_prefix: str) -> List[Customer]:
         """
         Returns a list of all customers starting with the specified name
         """
-        obj = self.get(f"/api/customers?limit=99999&textSearch={cust_name_prefix}", f"Error retrieving customers with names starting with '{cust_name_prefix}'")["data"]
-        x = self.tb_objects_from_list(obj, Customer)
-        return x
+        objs = self.get(f"/api/customers?pageSize=99999&page=0&textSearch={cust_name_prefix}", f"Error retrieving customers with names starting with '{cust_name_prefix}'")["data"]
+
+        objects = []
+        for obj in objs:
+            # Sometimes this comes in as a dict, sometimes as a string.  Not sure why.
+            if not isinstance(obj["additionalInfo"], dict):
+                obj["additionalInfo"] = json.loads(obj["additionalInfo"])
+
+            objects.append(Customer(self, **obj))
+        return objects
 
 
     def get_customer_by_name(self, cust_name: str) -> Optional[Customer]:
@@ -829,11 +876,11 @@ class TbApi:
 
 
     def get_all_customers(self) -> List[Customer]:
-        obj = self.get("/api/customers?limit=99999", "Error fetching list of all customers")["data"]
+        obj = self.get("/api/customers?pageSize=99999&page=0", "Error fetching list of all customers")["data"]
         return self.tb_objects_from_list(obj, Customer)
 
 
-    def get_device_by_id(self, device_id: str) -> Device:
+    def get_device_by_id(self, device_id: Union[Id, str]) -> Device:
         """
         Returns an instantiated Device object device_id can be either an Id object or a guid
         """
@@ -849,7 +896,7 @@ class TbApi:
         """
         Returns a list of all devices starting with the specified name
         """
-        data = self.get(f"/api/tenant/devices?limit=99999&textSearch={device_name_prefix}", f"Error fetching devices with name matching '{device_name_prefix}'")["data"]
+        data = self.get(f"/api/tenant/devices?pageSize=99999&page=0&textSearch={device_name_prefix}", f"Error fetching devices with name matching '{device_name_prefix}'")["data"]
         return self.tb_objects_from_list(data, Device)
 
 
@@ -860,7 +907,7 @@ class TbApi:
 
 
     def get_all_devices(self):
-        json = self.get("/api/tenant/devices?limit=99999", "Error fetching list of all devices")["data"]
+        json = self.get("/api/tenant/devices?pageSize=99999&page=0", "Error fetching list of all devices")["data"]
         return self.tb_objects_from_list(json, Device)
 
     # TODO: create Asset object
@@ -881,7 +928,6 @@ class TbApi:
         return asset
 
 
-    # TODO: Move to Device.new(tbapi,.....).save()?  # or not
     def add_device(self, device_name: str, device_type: str, shared_attributes: Optional[Dict[str, Any]] = None, server_attributes: Optional[Dict[str, Any]] = None) -> Device:
         """
         Returns device object
@@ -1008,10 +1054,10 @@ class TbApi:
 
 
     # TODO: ???
-    def send_asset_telemetry(self, asset_id, data, scope="SERVER_SCOPE", timestamp=None):
+    def send_asset_telemetry(self, asset_id, data, scope: AttributeScope = AttributeScope.SERVER, timestamp=None):
         if timestamp is not None:
             data = {"ts": timestamp, "values": data}
-        return self.post(f"/api/plugins/telemetry/ASSET/{asset_id}/timeseries/{scope}", data, f"Error sending telemetry for asset with id '{asset_id}'")
+        return self.post(f"/api/plugins/telemetry/ASSET/{asset_id}/timeseries/{scope.value}", data, f"Error sending telemetry for asset with id '{asset_id}'")
 
 
     # def send_telemetry(self, device_token, data, timestamp=None):
@@ -1161,7 +1207,9 @@ class TbApi:
             headers["X-Authorization"] = "Bearer " + token
 
 
-    def get(self, params, msg: str) -> Dict[str, Any]:
+    def get(self, params, msg: str) -> Any:
+        if self.mothership_url is None:
+            raise ConfigurationError("Cannot retrieve data without a URL: create a file called config.py and define 'mothership_url' to point to your Thingsboard server.\nExample: mothership_url = 'http://www.thingsboard.org:8080'")
         url = self.mothership_url + params
         headers = {"Accept": "application/json"}
         self.add_auth_header(headers)
@@ -1200,7 +1248,7 @@ class TbApi:
 
     def post(self, params: str, data: Optional[Union[str, Dict[str, Any]]], msg: str) -> Dict[str, Any]:
         """
-        Data can be a string or a dict; if it's a dict, it will be flattened
+        Data can be a string or a dict
         """
         url = self.mothership_url + params
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -1236,408 +1284,426 @@ class TbApi:
                 ex.args += (msg, f"RESPONSE BODY: {response.content.decode('utf8')}")   # Append response to the exception to make it easier to diagnose
                 raise
 
+
+class ConfigurationError(Exception):
+    pass
+
 #####################################
 # Tests
 
 
-
-def get_birdhouses(tbapi):
-    return tbapi.get_devices_by_name("Birdhouse")
+if __name__ == "__main__":
 
 
-def compare_dicts(d1, d2, path=""):
-    for k in d1:
-        if (k not in d2):
-            print(path, ":")
-            print(k + " as key not in d2", "\n")
-        else:
-            if type(d1[k]) is dict:
-                if path == "":
-                    path = k
-                else:
-                    path = path + "->" + k
-                compare_dicts(d1[k], d2[k], path)
+    def get_birdhouses(tbapi):
+        return tbapi.get_devices_by_name("Birdhouse")
+
+
+    def compare_dicts(d1, d2, path=""):
+        for k in d1:
+            if (k not in d2):
+                print(path, ":")
+                print(k + " as key not in d2", "\n")
             else:
-                if d1[k] != d2[k]:
-                    print(path, ":")
-                    print(" - ", k, " : ", d1[k])
-                    print(" + ", k, " : ", d2[k])
+                if type(d1[k]) is dict:
+                    if path == "":
+                        path = k
+                    else:
+                        path = path + "->" + k
+                    compare_dicts(d1[k], d2[k], path)
+                else:
+                    if d1[k] != d2[k]:
+                        print(path, ":")
+                        print(" - ", k, " : ", d1[k])
+                        print(" + ", k, " : ", d2[k])
 
 
-# Get the secret stuff
-from config import mothership_url, thingsboard_username, thingsboard_password
-import json
-from requests.exceptions import HTTPError
+    # Get the secret stuff
+    try:
+        from config import mothership_url, thingsboard_username, thingsboard_password
+    except:
+        mothership_url = None
+        thingsboard_username = None
+        thingsboard_password = None
 
-print("Loading data...", end=None)
-tbapi = TbApi(mothership_url, thingsboard_username, thingsboard_password)
 
-def get_test_device() -> Device:
+    import json
+    from requests.exceptions import HTTPError
+
+    print("Loading data...", end=None)
+    tbapi = TbApi(mothership_url, thingsboard_username, thingsboard_password)
+
+    def get_test_device() -> Device:
+        device = tbapi.get_device_by_name("Birdhouse 001")
+        assert device
+        return device
+
+
+    device = get_test_device()  # redundant (repeated below)
+    customer = tbapi.get_customer_by_name("Birdhouse 001")  # redundant (repeated below)
+    dash = tbapi.get_dashboard_by_name("Birdhouse 001 Dash")
+    dash_def = tbapi.get_dashboard_by_id("0d538a70-d996-11e7-a394-bf47d8c29be7")
+
+    assert customer
+    assert dash
+
+    # Validate the EntityType enum
+    assert device.id.entity_type == EntityType.DEVICE.value
+    assert customer.id.entity_type == EntityType.CUSTOMER.value
+    assert dash.id.entity_type == EntityType.DASHBOARD.value
+    assert dash_def.id.entity_type == EntityType.DASHBOARD.value
+
+
+    try:
+        bogus = tbapi.get_dashboard_definition("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid
+        assert False
+    except HTTPError:
+        pass
+
+    try:
+        bogus = tbapi.get_dashboard_by_id("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid
+        assert False
+    except HTTPError:
+        pass
+
+    try:
+        bogus = tbapi.get_customer_by_id("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid
+        assert False
+    except HTTPError:
+        pass
+
+
+
+    assert isinstance(tbapi.get_device_by_id(device.id.id), Device)     # Retrieve a device by its guid
+    assert isinstance(tbapi.get_device_by_id(device.id), Device)        # Retrieve a device by an Id object
+
+    try:
+        bogus = tbapi.get_device_by_id("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid -> failure raises exception
+        assert False
+    except HTTPError:
+        pass
+
+    assert tbapi.get_device_by_name("Does Not Exist") is None   # Bogus name -> failure returns None
+
+    devices = tbapi.get_devices_by_name("Birdhouse 0")
+    assert len(devices) > 1
+    assert isinstance(devices[0], Device)
+
+    devices = tbapi.get_devices_by_name("Does Not Exist")
+    assert len(devices) == 0
+
+    devices = tbapi.get_all_devices()
+    assert len(devices) > 1
+    assert isinstance(devices[0], Device)
+
     device = tbapi.get_device_by_name("Birdhouse 001")
-    assert device
-    return device
+    assert isinstance(device, Device)
+    assert isinstance(device.id, Id)
+    token = device.token
+    assert isinstance(token, str)
+    assert len(token) == 20     # Tokens are always 20 character strings
+
+    # Make sure these calls produce equivalent results
+    attrs1 = device.get_server_attributes()
+    attrs2 = device.get_attributes(AttributeScope.SERVER)
+    assert attrs1 == attrs2
+    assert len(attrs1) > 0
+
+    attrs1 = device.get_shared_attributes()
+    attrs2 = device.get_attributes(AttributeScope.SHARED)
+    assert attrs1 == attrs2
+    assert len(attrs1) > 0
+
+    attrs1 = device.get_client_attributes()
+    attrs2 = device.get_attributes(AttributeScope.CLIENT)
+    assert attrs1 == attrs2
+    assert len(attrs1) > 0
+
+    assert device.get_customer().id.entity_type == EntityType.CUSTOMER.value
+
+
+    # Set/retrieve/delete attributes
+    def test_attributes(device: Device, scope: AttributeScope):
+        key = "test_delete_me"
+        val = 12345
+
+        # Verify key doesn't exist
+        attrs = device.get_attributes(scope)
+        assert key not in attrs # attrs.get(key) is None
+
+        # Set
+        device.set_attributes({key: val}, scope)
+        attrs = device.get_attributes(scope)
+
+        found = False
+        for attr in attrs:
+            if attr["key"] == key:
+                assert attr["value"] == val
+                found = True
+        assert found
+
+        # Cleanup
+        found = False
+        device.delete_attributes([key], scope)
+        attrs = device.get_attributes(scope)
+        for attr in attrs:
+            if attr["key"] == key:
+                assert attr["value"] == None
+                found = True
+        assert found == False
+
+
+    test_attributes(device, AttributeScope.SERVER)
+    test_attributes(device, AttributeScope.SHARED)
+    # test_attributes(device, AttributeScope.CLIENT) # TODO: should setting and getting in the Client scope work?
+
+    # Device ownership
+    device.assign_to(customer)
+    assert not device.is_public()
+    device = get_test_device()  # Get it again to make sure changes stuck
+    assert not device.is_public()
+
+    assert device.get_customer().id == customer.id
+    device.make_public()
+    assert device.is_public()
+    device = get_test_device()  # Get it again to make sure changes stuck
+    assert device.is_public()
+
+    assert device.get_customer().id != customer.id
+    device.assign_to(customer)
+    assert device.get_customer().id == customer.id
+    device = get_test_device()  # Get it again to make sure changes stuck
+    assert device.get_customer().id == customer.id
+
+    # Just make sure these work... more detailed tests below
+    assert device.get_telemetry_keys()
+    assert device.get_telemetry(device.get_telemetry_keys()[:3])
+
+    device.set_server_attributes({"delme": "123"})
+    assert "delme" in device.get_server_attributes()
+    device.delete_server_attributes("delme")
+    assert "delme" not in device.get_server_attributes()
+
+    print(" done with first round of tests.")
+
+    print("testing devices round 2")
+
+    exit()
+    # create a new device
+    shared_attributes = {"my_shared_attribute_1": 111}
+    server_attributes = {"my_server_attribute_2": 222}
+    device = tbapi.add_device("Device Test Subject", "Guinea Pig", shared_attributes=shared_attributes, server_attributes=server_attributes)
+
+    assert(isinstance(device.get_customer(), Customer)) # should be a guid
+    token = device.token
+    assert(isinstance(token, str))
+    assert(len(token) == 20)
+
+    # Customer tests
+    print("now testing customers")
+
+    customer = tbapi.get_customer_by_name("Birdhouse 001")
+
+    assert isinstance(customer, Customer)
+    assert isinstance(customer.id, Id)
+    assert tbapi.get_customer_by_id(customer.id.id) == customer
+    assert tbapi.get_customer_by_id(customer.id) == customer
 
+    assert tbapi.get_customer_by_name("Does Not Exist") is None
 
-device = get_test_device()  # redundant (repeated below)
-customer = tbapi.get_customer_by_name("Birdhouse 001")  # redundant (repeated below)
-dash = tbapi.get_dashboard_by_name("Birdhouse 001 Dash")
-dash_def = tbapi.get_dashboard_definition("0d538a70-d996-11e7-a394-bf47d8c29be7")
+    customers = tbapi.get_customers_by_name("Birdhouse 0")
+    assert len(customers) > 1
+    assert isinstance(customers[0], Customer)
 
-assert customer
-assert dash
-
-# Validate the EntityType enum
-assert device.id.entity_type == EntityType.DEVICE.value
-assert customer.id.entity_type == EntityType.CUSTOMER.value
-assert dash.id.entity_type == EntityType.DASHBOARD.value
-assert dash_def.id.entity_type == EntityType.DASHBOARD.value
-
-
-try:
-    bogus = tbapi.get_dashboard_definition("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid
-    assert False
-except HTTPError:
-    pass
-
-try:
-    bogus = tbapi.get_dashboard_by_id("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid
-    assert False
-except HTTPError:
-    pass
-
-try:
-    bogus = tbapi.get_customer_by_id("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid
-    assert False
-except HTTPError:
-    pass
-
-
-
-assert isinstance(tbapi.get_device_by_id(device.id.id), Device)     # Retrieve a device by its guid
-assert isinstance(tbapi.get_device_by_id(device.id), Device)        # Retrieve a device by an Id object
-
-try:
-    bogus = tbapi.get_device_by_id("3d538a70-d996-11e7-a394-bf47d8c29be7")   # Bogus guid -> failure raises exception
-    assert False
-except HTTPError:
-    pass
-
-assert tbapi.get_device_by_name("Does Not Exist") is None   # Bogus name -> failure returns None
-
-devices = tbapi.get_devices_by_name("Birdhouse 0")
-assert len(devices) > 1
-assert isinstance(devices[0], Device)
-
-devices = tbapi.get_devices_by_name("Does Not Exist")
-assert len(devices) == 0
-
-devices = tbapi.get_all_devices()
-assert len(devices) > 1
-assert isinstance(devices[0], Device)
-
-device = tbapi.get_device_by_name("Birdhouse 001")
-assert isinstance(device, Device)
-assert isinstance(device.id, Id)
-token = device.get_token()
-assert isinstance(token, str)
-assert len(token) == 20     # Tokens are always 20 character strings
-
-# Make sure these calls produce equivalent results
-attrs1 = device.get_server_attributes()
-attrs2 = device.get_attributes(AttributeScope.SERVER)
-assert attrs1 == attrs2
-assert len(attrs1) > 0
-
-attrs1 = device.get_shared_attributes()
-attrs2 = device.get_attributes(AttributeScope.SHARED)
-assert attrs1 == attrs2
-assert len(attrs1) > 0
-
-attrs1 = device.get_client_attributes()
-attrs2 = device.get_attributes(AttributeScope.CLIENT)
-assert attrs1 == attrs2
-assert len(attrs1) > 0
+    customers = tbapi.get_customers_by_name("Does Not Exist")
+    assert len(customers) == 0
 
-assert device.get_customer().id.entity_type == EntityType.CUSTOMER.value
-
-
-# Set/retrieve/delete attributes
-def test_attributes(device: Device, scope: AttributeScope):
-    key = "test_delete_me"
-    val = 12345
-
-    # Verify key doesn't exist
-    attrs = device.get_attributes(scope)
-    assert key not in attrs # attrs.get(key) is None
-
-    # Set
-    device.set_attributes({key: val}, scope)
-    attrs = device.get_attributes(scope)
-
-    found = False
-    for attr in attrs:
-        if attr["key"] == key:
-            assert attr["value"] == val
-            found = True
-    assert found
-
-    # Cleanup
-    found = False
-    device.delete_attributes([key], scope)
-    attrs = device.get_attributes(scope)
-    for attr in attrs:
-        if attr["key"] == key:
-            assert attr["value"] == None
-            found = True
-    assert found == False
-
-
-test_attributes(device, AttributeScope.SERVER)
-test_attributes(device, AttributeScope.SHARED)
-# test_attributes(device, AttributeScope.CLIENT) # TODO: should setting and getting in the Client scope work?
-
-# Device ownership
-device.assign_to(customer)
-assert not device.is_public()
-device = get_test_device()  # Get it again to make sure changes stuck
-assert not device.is_public()
-
-assert device.get_customer().id == customer.id
-device.make_public()
-assert device.is_public()
-device = get_test_device()  # Get it again to make sure changes stuck
-assert device.is_public()
-
-assert device.get_customer().id != customer.id
-device.assign_to(customer)
-assert device.get_customer().id == customer.id
-device = get_test_device()  # Get it again to make sure changes stuck
-assert device.get_customer().id == customer.id
-
-# Just make sure these work... more detailed tests below
-assert device.get_telemetry_keys()
-assert device.get_telemetry(device.get_telemetry_keys()[:3])
-
-print(" done with first round of tests.")
-
-print("testing devices round 2")
-
-exit()
-# create a new device
-shared_attributes = {"my_shared_attribute_1": 111}
-server_attributes = {"my_server_attribute_2": 222}
-device = tbapi.add_device("Device Test Subject", "Guinea Pig", shared_attributes=shared_attributes, server_attributes=server_attributes)
-
-assert(isinstance(device.get_customer(), Customer)) # should be a guid
-token = device.get_token()
-assert(isinstance(token, str))
-assert(len(token) == 20)
-
-# Customer tests
-print("now testing customers")
-
-customer = tbapi.get_customer_by_name("Birdhouse 001")
-
-assert isinstance(customer, Customer)
-assert isinstance(customer.id, Id)
-assert tbapi.get_customer_by_id(customer.id.id) == customer
-assert tbapi.get_customer_by_id(customer.id) == customer
-
-assert tbapi.get_customer_by_name("Does Not Exist") is None
-
-customers = tbapi.get_customers_by_name("Birdhouse 0")
-assert len(customers) > 1
-assert isinstance(customers[0], Customer)
-
-customers = tbapi.get_customers_by_name("Does Not Exist")
-assert len(customers) == 0
-
-customers = tbapi.get_all_customers()
-assert len(customers) > 1
-assert isinstance(customers[0], Customer)
-
+    customers = tbapi.get_all_customers()
+    assert len(customers) > 1
+    assert isinstance(customers[0], Customer)
 
-try:
-    print(customer.additionalInfo)     # Should not be accessible -- we remapped this name
-    assert False
-except AttributeError:
-    pass
 
-# Assign an unknown attribute -- should raise exception
-try:
-    customer.unknown = "LLL"
-    assert False
-except ValueError:
-    pass
+    try:
+        print(customer.additionalInfo)     # Should not be accessible -- we remapped this name
+        assert False
+    except AttributeError:
+        pass
 
-# Assign an unknown attribute II -- should raise exception
-try:
-    customer["unknown"] = "LLL"
-    assert False
-except TypeError:
-    pass
+    # Assign an unknown attribute -- should raise exception
+    try:
+        customer.unknown = "LLL"
+        assert False
+    except ValueError:
+        pass
 
-# Access an unknown attribute -- should raise exception
-try:
-    print(customer.unknown)
-    assert False
-except AttributeError:
-    pass
+    # Assign an unknown attribute II -- should raise exception
+    try:
+        customer["unknown"] = "LLL"
+        assert False
+    except TypeError:
+        pass
 
-# Access an unknown attribute II -- should raise exception
-try:
-    print(customer["strange"])
-    assert False
-except TypeError:
-    pass
+    # Access an unknown attribute -- should raise exception
+    try:
+        print(customer.unknown)
+        assert False
+    except AttributeError:
+        pass
 
+    # Access an unknown attribute II -- should raise exception
+    try:
+        print(customer["strange"])
+        assert False
+    except TypeError:
+        pass
 
-# Construct with an unknown attribute -- should raise exception
-bad_cust_dict = customer.dict(by_alias=True)
-bad_cust_dict["unknown_attr"] = 666
-try:
-    bad_c = Customer.from_dict(bad_cust_dict)
-    assert False
-except AttributeError:
-    pass
 
-# Time handled correctly (also verifies name translation: createdTime -> created_time -> createdTime)
-assert(isinstance(customer.created_time, datetime))            # Rehydrated time is a datetime
-assert(isinstance(json.loads(customer.json(by_alias=True))["createdTime"], int))     # Serialized time is int
+    # Construct with an unknown attribute -- should raise exception
+    bad_cust_dict = customer.dict(by_alias=True)
+    bad_cust_dict["unknown_attr"] = 666
+    try:
+        bad_c = Customer.from_dict(bad_cust_dict)
+        assert False
+    except AttributeError:
+        pass
 
+    # Time handled correctly (also verifies name translation: createdTime -> created_time -> createdTime)
+    assert(isinstance(customer.created_time, datetime))            # Rehydrated time is a datetime
+    assert(isinstance(json.loads(customer.json(by_alias=True))["createdTime"], int))     # Serialized time is int
 
 
-# Dashboard built right?
-assert type(dash.assigned_customers[0]) is CustomerId
 
-# Check attribute renaming at top level -- incoming json uses createdTime, we remap to created_time.  Make sure it works.
-assert dash.created_time
-try:
-    dash.createdTime
-    assert False
-except AttributeError:
-    pass
+    # Dashboard built right?
+    assert type(dash.assigned_customers[0]) is CustomerId
 
-# And check remapping when converting back to json
-assert json.loads(dash.json(by_alias=True)).get("createdTime")
-assert json.loads(dash.json(by_alias=True)).get("created_time") is None
+    # Check attribute renaming at top level -- incoming json uses createdTime, we remap to created_time.  Make sure it works.
+    assert dash.created_time
+    try:
+        dash.createdTime
+        assert False
+    except AttributeError:
+        pass
 
-# Check nested attribute renaming
-assert dash.assigned_customers[0].customer_id.entity_type == EntityType.CUSTOMER.value
-try:
-    dash.assigned_customers[0].customer_id.entityType
-    assert False
-except AttributeError:
-    pass
-assert json.loads(dash.json(by_alias=True))["assignedCustomers"][0].get("customerId", {}).get("entityType") == EntityType.CUSTOMER.value
-assert json.loads(dash.json(by_alias=True))["assignedCustomers"][0].get("customerId", {}).get("entity_type") is None
+    # And check remapping when converting back to json
+    assert json.loads(dash.json(by_alias=True)).get("createdTime")
+    assert json.loads(dash.json(by_alias=True)).get("created_time") is None
 
-# assert(Device.from_dict(d.to_dict).to_dict == d.to_dict)
+    # Check nested attribute renaming
+    assert dash.assigned_customers[0].customer_id.entity_type == EntityType.CUSTOMER.value
+    try:
+        dash.assigned_customers[0].customer_id.entityType
+        assert False
+    except AttributeError:
+        pass
+    assert json.loads(dash.json(by_alias=True))["assignedCustomers"][0].get("customerId", {}).get("entityType") == EntityType.CUSTOMER.value
+    assert json.loads(dash.json(by_alias=True))["assignedCustomers"][0].get("customerId", {}).get("entity_type") is None
 
+    # assert(Device.from_dict(d.to_dict).to_dict == d.to_dict)
 
-# Serialized looks like original?
-# compare_dicts(dev_json, json.loads(d.json(by_alias=True)))
 
+    # Serialized looks like original?
+    # compare_dicts(dev_json, json.loads(d.json(by_alias=True)))
 
-# Check GuidList[Id, Customer] ==> should fail
 
-assert dash.is_public() is True
+    # Check GuidList[Id, Customer] ==> should fail
 
+    assert dash.is_public() is True
 
 
-# Device telemetry tests -- TODO: make sure these clean up after themselves!
-keys = ["datum_1", "datum_2"]
-values = [555, 666]
-timestamps = [1595897301 * 1000, 1595897302 * 1000] # second timestamp must be greater than first for check to work
 
+    # Device telemetry tests -- TODO: make sure these clean up after themselves!
+    keys = ["datum_1", "datum_2"]
+    values = [555, 666]
+    timestamps = [1595897301 * 1000, 1595897302 * 1000] # second timestamp must be greater than first for check to work
 
-expected_tel_keys = []
-tel_keys = device.get_telemetry_keys()
-assert(tel_keys == expected_tel_keys)
 
-
-expected_telemetry = {}
-expected_latest_telemetry = {}
-
-
-def test_sending_telemetry(device: Device, data_index: int, timestamp_index: int):
-    device.send_telemetry({keys[data_index]: values[data_index]}, timestamp=timestamps[timestamp_index])
-    if keys[data_index] not in expected_tel_keys:
-        expected_tel_keys.append(keys[data_index])
+    expected_tel_keys = []
     tel_keys = device.get_telemetry_keys()
     assert(tel_keys == expected_tel_keys)
 
-    if keys[data_index] not in expected_telemetry.keys():
-        expected_telemetry[keys[data_index]]  = [{"ts": timestamps[timestamp_index], "value": str(values[data_index])}]
-    else:
-        expected_telemetry[keys[data_index]].insert(0, {"ts": timestamps[timestamp_index], "value": str(values[data_index])})
-        # expected_telemetry[keys[data_index]] += [{"ts": timestamps[timestamp_index], "value": str(values[data_index])}]
-    telemetry = device.get_telemetry(tel_keys)
-    assert(telemetry == expected_telemetry)
 
-    expected_latest_telemetry[keys[data_index]] = [{"ts": timestamps[timestamp_index], "value": str(values[data_index])}]
-    latest_telemetry = device.get_latest_telemetry(tel_keys)
-    assert(latest_telemetry == expected_latest_telemetry)
+    expected_telemetry = {}
+    expected_latest_telemetry = {}
 
 
-test_sending_telemetry(device, 0, 0)
-test_sending_telemetry(device, 1, 0)
-test_sending_telemetry(device, 0, 1)
+    def test_sending_telemetry(device: Device, data_index: int, timestamp_index: int):
+        device.send_telemetry({keys[data_index]: values[data_index]}, timestamp=timestamps[timestamp_index])
+        if keys[data_index] not in expected_tel_keys:
+            expected_tel_keys.append(keys[data_index])
+        tel_keys = device.get_telemetry_keys()
+        assert(tel_keys == expected_tel_keys)
+
+        if keys[data_index] not in expected_telemetry.keys():
+            expected_telemetry[keys[data_index]]  = [{"ts": timestamps[timestamp_index], "value": str(values[data_index])}]
+        else:
+            expected_telemetry[keys[data_index]].insert(0, {"ts": timestamps[timestamp_index], "value": str(values[data_index])})
+            # expected_telemetry[keys[data_index]] += [{"ts": timestamps[timestamp_index], "value": str(values[data_index])}]
+        telemetry = device.get_telemetry(tel_keys)
+        assert(telemetry == expected_telemetry)
+
+        expected_latest_telemetry[keys[data_index]] = [{"ts": timestamps[timestamp_index], "value": str(values[data_index])}]
+        latest_telemetry = device.get_latest_telemetry(tel_keys)
+        assert(latest_telemetry == expected_latest_telemetry)
 
 
-# for tel_key in tel_keys:
-#     for timestamp in timestamps:
-#         device.delete_telemetry(tel_key, timestamp)
-# telemetry = device.get_telemetry(tel_keys)
-# assert(telemetry == {})
+    test_sending_telemetry(device, 0, 0)
+    test_sending_telemetry(device, 1, 0)
+    test_sending_telemetry(device, 0, 1)
+
+
+    # for tel_key in tel_keys:
+    #     for timestamp in timestamps:
+    #         device.delete_telemetry(tel_key, timestamp)
+    # telemetry = device.get_telemetry(tel_keys)
+    # assert(telemetry == {})
 
 
 
-def check_attributes(device_attributes: List[Dict[str, Any]], expected_attributes: Dict[str, Any], expected=True):
-    # device_attributes is a list of dicts, formatted [{"key": key, "lastUpdateTs": int, "value": val}]
-    for expected_key, expected_val in expected_attributes.items():
-        match: bool = False
-        for attr in device_attributes: # a dict, formatted [{"key": key, "lastUpdateTs": int, "value": val}]
-            if attr["key"] == expected_key and attr["value"] == expected_val:   # not checking the timestamps
-                match = True
-        assert(match == expected)
+    def check_attributes(device_attributes: List[Dict[str, Any]], expected_attributes: Dict[str, Any], expected=True):
+        # device_attributes is a list of dicts, formatted [{"key": key, "lastUpdateTs": int, "value": val}]
+        for expected_key, expected_val in expected_attributes.items():
+            match: bool = False
+            for attr in device_attributes: # a dict, formatted [{"key": key, "lastUpdateTs": int, "value": val}]
+                if attr["key"] == expected_key and attr["value"] == expected_val:   # not checking the timestamps
+                    match = True
+            assert(match == expected)
 
 
-new_attributes = {"my_new_attribute_3": 333, "my_new_attribute_4": 444}
-expected_attributes_for_shared_scope = {**shared_attributes, **new_attributes}
+    new_attributes = {"my_new_attribute_3": 333, "my_new_attribute_4": 444}
+    expected_attributes_for_shared_scope = {**shared_attributes, **new_attributes}
 
-expected_attributes_for_server_scope = {**server_attributes, **new_attributes}
+    expected_attributes_for_server_scope = {**server_attributes, **new_attributes}
 
-device.set_shared_attributes(new_attributes)
-device.set_server_attributes(new_attributes)
-check_attributes(device.get_shared_attributes(), expected_attributes_for_shared_scope, True)
-check_attributes(device.get_server_attributes(), expected_attributes_for_server_scope, True)
-device.delete_shared_attributes([*(expected_attributes_for_shared_scope.keys())])
-device.delete_server_attributes([*(expected_attributes_for_server_scope.keys())])
-check_attributes(device.get_shared_attributes(), expected_attributes_for_shared_scope, False)
-check_attributes(device.get_server_attributes(), expected_attributes_for_server_scope, False)
-
-
-device.set_attributes({**shared_attributes, **new_attributes}, AttributeScope.SHARED)
-device.set_attributes({**server_attributes, **new_attributes}, AttributeScope.SERVER)
-check_attributes(device.get_attributes(AttributeScope.SHARED), expected_attributes_for_shared_scope, True)
-check_attributes(device.get_attributes(AttributeScope.SERVER), expected_attributes_for_server_scope, True)
-device.delete_attributes([*(expected_attributes_for_shared_scope.keys())], AttributeScope.SHARED)
-device.delete_attributes([*(expected_attributes_for_server_scope.keys())], AttributeScope.SERVER)
-check_attributes(device.get_attributes(AttributeScope.SHARED), expected_attributes_for_shared_scope, False)
-check_attributes(device.get_attributes(AttributeScope.SERVER), expected_attributes_for_server_scope, False)
+    device.set_shared_attributes(new_attributes)
+    device.set_server_attributes(new_attributes)
+    check_attributes(device.get_shared_attributes(), expected_attributes_for_shared_scope, True)
+    check_attributes(device.get_server_attributes(), expected_attributes_for_server_scope, True)
+    device.delete_shared_attributes([*(expected_attributes_for_shared_scope.keys())])
+    device.delete_server_attributes([*(expected_attributes_for_server_scope.keys())])
+    check_attributes(device.get_shared_attributes(), expected_attributes_for_shared_scope, False)
+    check_attributes(device.get_server_attributes(), expected_attributes_for_server_scope, False)
 
 
-device = device.assign_to_public_user()
-assert(device.is_public())
-
-assert device.delete()
-assert not device.delete()      # Can't delete again
-
-try:
-    test_sending_telemetry(device, token, 1, 1)
-except requests.exceptions.HTTPError:
-    print("the device has been successfully deleted!")
+    device.set_attributes({**shared_attributes, **new_attributes}, AttributeScope.SHARED)
+    device.set_attributes({**server_attributes, **new_attributes}, AttributeScope.SERVER)
+    check_attributes(device.get_attributes(AttributeScope.SHARED), expected_attributes_for_shared_scope, True)
+    check_attributes(device.get_attributes(AttributeScope.SERVER), expected_attributes_for_server_scope, True)
+    device.delete_attributes([*(expected_attributes_for_shared_scope.keys())], AttributeScope.SHARED)
+    device.delete_attributes([*(expected_attributes_for_server_scope.keys())], AttributeScope.SERVER)
+    check_attributes(device.get_attributes(AttributeScope.SHARED), expected_attributes_for_shared_scope, False)
+    check_attributes(device.get_attributes(AttributeScope.SERVER), expected_attributes_for_server_scope, False)
 
 
-print("done testing devices round 2")
+    device = device.assign_to_public_user()
+    assert(device.is_public())
+
+    assert device.delete()
+    assert not device.delete()      # Can't delete again
+
+    try:
+        test_sending_telemetry(device, token, 1, 1)
+    except requests.exceptions.HTTPError:
+        print("the device has been successfully deleted!")
+
+
+    print("done testing devices round 2")
