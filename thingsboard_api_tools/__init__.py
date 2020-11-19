@@ -117,7 +117,8 @@ class Customer(TbObject):
         return CustomerId(**obj)
 
 
-    def get_devices(self):
+    @property
+    def devices(self):
         """
         Returns a list of all devices associated with a customer
         """
@@ -217,8 +218,8 @@ class Device(TbObject):
             obj = self.tbapi.post(f"/api/customer/{customer.id.id}/device/{self.id.id}", None, f"Error assigning device '{self.id.id}' to customer {customer}")
             self.customer_id = Id(**obj["customerId"])
 
-
-    def get_customer(self) -> Customer:
+    @property
+    def customer(self) -> Customer:
         """ Returns the customer assigned to the device """
         return self.tbapi.get_customer_by_id(self.customer_id)
 
@@ -602,7 +603,8 @@ class Dashboard(TbObject):
             self.assigned_customers = [self.tbapi.get_public_user_id()]
 
 
-    def get_public_url(self) -> Optional[str]:
+    @property
+    def public_url(self) -> Optional[str]:
         if not self.is_public():
             return None
 
