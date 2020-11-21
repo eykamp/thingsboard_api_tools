@@ -37,6 +37,7 @@ class EntityType(Enum):
     CUSTOMER = "CUSTOMER"
     DASHBOARD = "DASHBOARD"
     DEVICE = "DEVICE"
+    TENANT = "TENANT"
 
 
 class Aggregation(Enum):
