@@ -40,7 +40,7 @@ class EntityType(Enum):
     TENANT = "TENANT"
 
 
-class Aggregation(Enum):
+class AggregationEnum(Enum):
     MIN = "MIN"
     MAX = "MAX"
     AVG = "AVG"
@@ -127,6 +127,7 @@ class Customer(TbObject):
 
         return self.tbapi.get(f"/api/customer/{cust_id}/devices?pageSize=99999&page=0", f"Error retrieving devices for customer '{cust_id}'")["data"]
 
+
     def delete(self) -> bool:
         """
         Deletes the customer from the server, returns True if customer was deleted, False if it did not exist
@@ -179,6 +180,34 @@ class Customer(TbObject):
 
     # def cc(self):
     #     self.update()
+
+
+class TelemetryRecord():
+    def __init__(self, values: Dict[str, Any], ts: Optional[int] = None):
+        self.values = values
+        self.ts = ts
+
+
+    def format(self) -> Dict[str, Any]:
+        """ Format data for transmission.  Intended for internal use. """
+        if self.ts is None:
+            return self.values
+
+        return {"ts": self.ts, "values": self.values}
+
+
+    def __str__(self):
+        max_len = 20
+
+        v = str(self.values)
+        val_str = v[:max_len]
+        if len(v) > max_len:
+            val_str += "..."
+        return f"ts: {self.ts}, values: {val_str}"
+
+
+    def __repr__(self):
+        return self.__str__()
 
 
 class Device(TbObject):
@@ -252,8 +281,8 @@ class Device(TbObject):
         endTime: int = int(time.time() * 1000),     # Unix timestamp, now, convert to milliseconds
         interval: int = 60 * 1000,                  # 1 minute
         limit: int = 100,
-        agg: Aggregation = Aggregation.NONE
-    ) -> Dict[str, List[Dict[str, Any]]]:
+        agg: AggregationEnum = AggregationEnum.NONE
+    ) -> Dict[str, List[Dict[str, Any]]]:       # TODO: Return a TelemetryRecord (or list)
         """
         Pass a single key, a stringified comma-separate list, a list object, or a tuple
         Note: Returns a sane amount of data by default, in same shape as get_latest_telemetry()
@@ -271,12 +300,15 @@ class Device(TbObject):
         return self.tbapi.get(params, error_message)
 
 
-    def send_telemetry(self, data: Dict[str, Any], timestamp: int = 0):
-        if not data:
-            return
-
-        if timestamp:
-            data = {"ts": timestamp, "values": data}
+    # Ok to combine mulitple keys:
+    # {'ts': 1526039400000, 'values': {'humidity': 60.0, 'pm1': 1.84, 'pm10': 2.65, 'pm25': 2.32, 'temperature': 61.0}}
+    def send_telemetry(self, telemetry: Union[TelemetryRecord, List[TelemetryRecord]]) -> Dict[str, Any]:
+        if isinstance(telemetry, TelemetryRecord):
+            data = telemetry.format()
+        else:
+            data = []
+            for tel in telemetry:
+                data += tel.format()
 
         return self.tbapi.post(f"/api/v1/{self.token}/telemetry", data, f"Error sending telemetry for device '{self.name}'")
 
@@ -408,7 +440,6 @@ def _exact_match(name: str, object_list: List[T]) -> Optional[T]:
             raise Exception(f"multiple matches were found for name {name}")
 
     return matches[0]
-
 
 
 class Widget(TbModel):
@@ -909,6 +940,11 @@ class TbApi:
         return _exact_match(device_name, devices)
 
 
+    def get_devices_by_type(self, device_type: str) -> List[Device]:
+        data = self.get(f"/api/tenant/devices?pageSize=99999&page=0&type={device_type}", f"Error fetching devices with type '{device_type}'")["data"]
+        return self.tb_objects_from_list(data, Device)
+
+
     def get_all_devices(self):
         json = self.get("/api/tenant/devices?pageSize=99999&page=0", "Error fetching list of all devices")["data"]
         return self.tb_objects_from_list(json, Device)
@@ -1249,7 +1285,7 @@ class TbApi:
         return True
 
 
-    def post(self, params: str, data: Optional[Union[str, Dict[str, Any]]], msg: str) -> Dict[str, Any]:
+    def post(self, params: str, data: Optional[Union[str, Dict[str, Any], List[Dict[str, Any]]]], msg: str) -> Dict[str, Any]:
         """
         Data can be a string or a dict
         """
