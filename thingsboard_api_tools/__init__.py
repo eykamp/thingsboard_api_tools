@@ -308,7 +308,7 @@ class Device(TbObject):
         else:
             data = []
             for tel in telemetry:
-                data += tel.format()
+                data.append(tel.format())
 
         return self.tbapi.post(f"/api/v1/{self.token}/telemetry", data, f"Error sending telemetry for device '{self.name}'")
 
