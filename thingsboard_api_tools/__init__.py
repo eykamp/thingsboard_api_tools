@@ -183,7 +183,7 @@ class Customer(TbObject):
 
 
 class TelemetryRecord():
-    def __init__(self, values: Dict[str, Any], ts: Optional[int] = None):
+    def __init__(self, values: Dict[str, Any], ts: Optional[datetime] = None):
         self.values = values
         self.ts = ts
 
@@ -203,7 +203,7 @@ class TelemetryRecord():
         val_str = v[:max_len]
         if len(v) > max_len:
             val_str += "..."
-        return f"ts: {self.ts}, values: {val_str}"
+        return f"ts: {int(self.ts.timestamp() * 1000)}, values: {val_str}"
 
 
     def __repr__(self):
@@ -309,6 +309,9 @@ class Device(TbObject):
             data = []
             for tel in telemetry:
                 data.append(tel.format())
+
+            if not data:
+                return {}   # Or... something?
 
         return self.tbapi.post(f"/api/v1/{self.token}/telemetry", data, f"Error sending telemetry for device '{self.name}'")
 
