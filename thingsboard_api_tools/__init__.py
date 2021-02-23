@@ -193,7 +193,10 @@ class TelemetryRecord():
         if self.ts is None:
             return self.values
 
-        return {"ts": self.ts, "values": self.values}
+        # If ts is a datetime, which it should be, convert it to epoch ms
+        ts = int(self.ts.timestamp() * 1000) if isinstance(self.ts, datetime) else self.ts
+
+        return {"ts": ts, "values": self.values}
 
 
     def __str__(self):
