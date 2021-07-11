@@ -17,6 +17,7 @@
 
 # Update with: pip install git+git://github.com/eykamp/thingsboard_api_tools.git --upgrade
 
+# pyright: strict
 import json
 import requests
 import time
@@ -37,10 +38,9 @@ class EntityType(Enum):
     CUSTOMER = "CUSTOMER"
     DASHBOARD = "DASHBOARD"
     DEVICE = "DEVICE"
-    TENANT = "TENANT"
 
 
-class AggregationEnum(Enum):
+class Aggregation(Enum):
     MIN = "MIN"
     MAX = "MAX"
     AVG = "AVG"
@@ -118,15 +118,13 @@ class Customer(TbObject):
         return CustomerId(**obj)
 
 
-    @property
-    def devices(self):
+    def get_devices(self):
         """
         Returns a list of all devices associated with a customer
         """
         cust_id = self.id.id
 
-        return self.tbapi.get(f"/api/customer/{cust_id}/devices?pageSize=99999&page=0", f"Error retrieving devices for customer '{cust_id}'")["data"]
-
+        return self.tbapi.get(f"/api/customer/{cust_id}/devices?limit=99999", f"Error retrieving devices for customer '{cust_id}'")["data"]
 
     def delete(self) -> bool:
         """
@@ -182,37 +180,6 @@ class Customer(TbObject):
     #     self.update()
 
 
-class TelemetryRecord():
-    def __init__(self, values: Dict[str, Any], ts: Optional[datetime] = None):
-        self.values = values
-        self.ts = ts
-
-
-    def format(self) -> Dict[str, Any]:
-        """ Format data for transmission.  Intended for internal use. """
-        if self.ts is None:
-            return self.values
-
-        # If ts is a datetime, which it should be, convert it to epoch ms
-        ts = int(self.ts.timestamp() * 1000) if isinstance(self.ts, datetime) else self.ts
-
-        return {"ts": ts, "values": self.values}
-
-
-    def __str__(self):
-        max_len = 20
-
-        v = str(self.values)
-        val_str = v[:max_len]
-        if len(v) > max_len:
-            val_str += "..."
-        return f"ts: {int(self.ts.timestamp() * 1000)}, values: {val_str}"
-
-
-    def __repr__(self):
-        return self.__str__()
-
-
 class Device(TbObject):
     id: Id
     additional_info: Optional[dict] = Field(alias="additionalInfo")
@@ -251,8 +218,8 @@ class Device(TbObject):
             obj = self.tbapi.post(f"/api/customer/{customer.id.id}/device/{self.id.id}", None, f"Error assigning device '{self.id.id}' to customer {customer}")
             self.customer_id = Id(**obj["customerId"])
 
-    @property
-    def customer(self) -> Customer:
+
+    def get_customer(self) -> Customer:
         """ Returns the customer assigned to the device """
         return self.tbapi.get_customer_by_id(self.customer_id)
 
@@ -284,8 +251,8 @@ class Device(TbObject):
         endTime: int = int(time.time() * 1000),     # Unix timestamp, now, convert to milliseconds
         interval: int = 60 * 1000,                  # 1 minute
         limit: int = 100,
-        agg: AggregationEnum = AggregationEnum.NONE
-    ) -> Dict[str, List[Dict[str, Any]]]:       # TODO: Return a TelemetryRecord (or list)
+        agg: Aggregation = Aggregation.NONE
+    ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Pass a single key, a stringified comma-separate list, a list object, or a tuple
         Note: Returns a sane amount of data by default, in same shape as get_latest_telemetry()
@@ -303,18 +270,12 @@ class Device(TbObject):
         return self.tbapi.get(params, error_message)
 
 
-    # Ok to combine mulitple keys:
-    # {'ts': 1526039400000, 'values': {'humidity': 60.0, 'pm1': 1.84, 'pm10': 2.65, 'pm25': 2.32, 'temperature': 61.0}}
-    def send_telemetry(self, telemetry: Union[TelemetryRecord, List[TelemetryRecord]]) -> Dict[str, Any]:
-        if isinstance(telemetry, TelemetryRecord):
-            data = telemetry.format()
-        else:
-            data = []
-            for tel in telemetry:
-                data.append(tel.format())
+    def send_telemetry(self, data: Dict[str, Any], timestamp: int = 0):
+        if not data:
+            return
 
-            if not data:
-                return {}   # Or... something?
+        if timestamp:
+            data = {"ts": timestamp, "values": data}
 
         return self.tbapi.post(f"/api/v1/{self.token}/telemetry", data, f"Error sending telemetry for device '{self.name}'")
 
@@ -323,7 +284,7 @@ class Device(TbObject):
         return self.tbapi.get(f"/api/plugins/telemetry/DEVICE/{self.id.id}/keys/timeseries", f"Error retrieving telemetry keys for device '{self.id.id}'")
 
 
-    def get_latest_telemetry(self, telemetry_keys: Union[str, List[str]]) -> Dict[str, List[Dict[str, Any]]]:
+    def get_latest_telemetry(self, telemetry_keys: List[str]) -> Dict[str, List[Dict[str, Any]]]:
         """
         Pass a single key, a stringified comma-separate list, a list object, or a tuple
         get_latest_telemetry(['datum_1', 'datum_2']) ==>
@@ -446,6 +407,7 @@ def _exact_match(name: str, object_list: List[T]) -> Optional[T]:
             raise Exception(f"multiple matches were found for name {name}")
 
     return matches[0]
+
 
 
 class Widget(TbModel):
@@ -641,8 +603,7 @@ class Dashboard(TbObject):
             self.assigned_customers = [self.tbapi.get_public_user_id()]
 
 
-    @property
-    def public_url(self) -> Optional[str]:
+    def get_public_url(self) -> Optional[str]:
         if not self.is_public():
             return None
 
@@ -740,21 +701,21 @@ class TbApi:
         """
         Return a list of all customers in the system
         """
-        return self.get("/api/customers?pageSize=99999&page=0", "Error retrieving customers")["data"]
+        return self.get("/api/customers?limit=99999", "Error retrieving customers")["data"]
 
 
     def get_tenant_assets(self):
         """
         Returns a list of all assets for current tenant
         """
-        return self.get("/api/tenant/assets?pageSize=99999&page=0", "Error retrieving assets for tenant")["data"]
+        return self.get("/api/tenant/assets?limit=99999", "Error retrieving assets for tenant")["data"]
 
 
     def get_tenant_devices(self):
         """
         Returns a list of all devices for current tenant
         """
-        return self.get("/api/tenant/devices?pageSize=99999&page=0", "Error retrieving devices for tenant")["data"]
+        return self.get("/api/tenant/devices?limit=99999", "Error retrieving devices for tenant")["data"]
 
 
     # def get_customer_devices(self, cust):
@@ -763,7 +724,7 @@ class TbApi:
     #     """
     #     cust_id = self.get_id(cust)
 
-    #     return self.get(f"/api/customer/{cust_id}/devices?pageSize=99999&page=0", f"Error retrieving devices for customer '{cust_id}'")["data"]
+    #     return self.get(f"/api/customer/{cust_id}/devices?limit=99999", f"Error retrieving devices for customer '{cust_id}'")["data"]
 
 
     def get_public_user_id(self) -> CustomerId:
@@ -823,31 +784,27 @@ class TbApi:
     #     return self.delete_customer_by_id(id)
 
 
-    def create_dashboard(self, dash_name: str, dash_def: DashboardDef, id: Optional[Id] = None) -> DashboardDef:
+    def create_dashboard(self, dash_name: str, dash_def: DashboardDef) -> DashboardDef:
         """
         Returns DashboardDef
         """
         data = {
-            "configuration": dash_def.configuration.dict(by_alias=True),
+            "configuration": dash_def.configuration.json(by_alias=True),
             "title": dash_name,
-            "name": dash_name,
+            "name": dash_name
         }
-
-        # Add an id if we have one; if we use the id of an existing dash, it will be overwritten
-        if id:
-            data["id"] = id.dict(by_alias=True)
 
         # Update the configuration
         obj = self.post("/api/dashboard", data, "Error creating new dashboard")
-        # obj["configuration"] = json.loads(obj["configuration"])     # We need to hydrate this string for the parser to work
+        obj["configuration"] = json.loads(obj["configuration"])     # We need to hydrate this string for the parser to work
         return DashboardDef(self, **obj)
 
 
     def get_dashboards_by_name(self, dash_name_prefix: str) -> List[Dashboard]:
         """
-        Returns a list of all dashes starting with the specified name.
+        Returns a list of all dashes starting with the specified name
         """
-        objs = self.get(f"/api/tenant/dashboards?pageSize=99999&page=0&textSearch={dash_name_prefix}", f"Error retrieving dashboards starting with '{dash_name_prefix}'")["data"]
+        objs = self.get(f"/api/tenant/dashboards?limit=99999&textSearch={dash_name_prefix}", f"Error retrieving dashboards starting with '{dash_name_prefix}'")["data"]
 
         dashes = list()
 
@@ -858,7 +815,7 @@ class TbApi:
 
 
     def get_dashboard_by_name(self, dash_name: str) -> Optional[Dashboard]:
-        """ Returns dashboard with specified name, or None if we can't find one. """
+        """ Returns dashboard with specified name, or None if we can't find one """
         dashes = self.get_dashboards_by_name(dash_name)
         for dash in dashes:
             if dash.title == dash_name:
@@ -869,7 +826,7 @@ class TbApi:
 
     def get_dashboard_by_id(self, dash_id: Union[Id, str]) -> Dashboard:
         """
-        Retrieve dashboard by id.
+        Retrieve dashboard by id
         """
         if isinstance(dash_id, Id):
             dash_id = dash_id.id
@@ -895,16 +852,23 @@ class TbApi:
         """
         Returns a list of all customers starting with the specified name
         """
-        objs = self.get(f"/api/customers?pageSize=99999&page=0&textSearch={cust_name_prefix}", f"Error retrieving customers with names starting with '{cust_name_prefix}'")["data"]
+        objs = self.get(f"/api/customers?limit=99999&textSearch={cust_name_prefix}", f"Error retrieving customers with names starting with '{cust_name_prefix}'")["data"]
 
         objects = []
         for obj in objs:
+            # print(type(obj))
+            print(obj)
+            # o = json.loads(obj)
+            print(type(obj["additionalInfo"]))
+
             # Sometimes this comes in as a dict, sometimes as a string.  Not sure why.
             if not isinstance(obj["additionalInfo"], dict):
                 obj["additionalInfo"] = json.loads(obj["additionalInfo"])
 
             objects.append(Customer(self, **obj))
         return objects
+        # x = self.tb_objects_from_list(obj, Customer)
+        # return x
 
 
     def get_customer_by_name(self, cust_name: str) -> Optional[Customer]:
@@ -916,7 +880,7 @@ class TbApi:
 
 
     def get_all_customers(self) -> List[Customer]:
-        obj = self.get("/api/customers?pageSize=99999&page=0", "Error fetching list of all customers")["data"]
+        obj = self.get("/api/customers?limit=99999", "Error fetching list of all customers")["data"]
         return self.tb_objects_from_list(obj, Customer)
 
 
@@ -936,7 +900,7 @@ class TbApi:
         """
         Returns a list of all devices starting with the specified name
         """
-        data = self.get(f"/api/tenant/devices?pageSize=99999&page=0&textSearch={device_name_prefix}", f"Error fetching devices with name matching '{device_name_prefix}'")["data"]
+        data = self.get(f"/api/tenant/devices?limit=99999&textSearch={device_name_prefix}", f"Error fetching devices with name matching '{device_name_prefix}'")["data"]
         return self.tb_objects_from_list(data, Device)
 
 
@@ -946,13 +910,8 @@ class TbApi:
         return _exact_match(device_name, devices)
 
 
-    def get_devices_by_type(self, device_type: str) -> List[Device]:
-        data = self.get(f"/api/tenant/devices?pageSize=99999&page=0&type={device_type}", f"Error fetching devices with type '{device_type}'")["data"]
-        return self.tb_objects_from_list(data, Device)
-
-
     def get_all_devices(self):
-        json = self.get("/api/tenant/devices?pageSize=99999&page=0", "Error fetching list of all devices")["data"]
+        json = self.get("/api/tenant/devices?limit=99999", "Error fetching list of all devices")["data"]
         return self.tb_objects_from_list(json, Device)
 
     # TODO: create Asset object
@@ -973,6 +932,7 @@ class TbApi:
         return asset
 
 
+    # TODO: Move to Device.new(tbapi,.....).save()?  # or not
     def add_device(self, device_name: str, device_type: str, shared_attributes: Optional[Dict[str, Any]] = None, server_attributes: Optional[Dict[str, Any]] = None) -> Device:
         """
         Returns device object
@@ -1215,6 +1175,7 @@ class TbApi:
 
     # def assign_device_to_public_user(self, device):
     #     """
+
     #     Pass in a device or a device_id
     #     """
     #     device_id = self.get_id(device)
@@ -1291,7 +1252,7 @@ class TbApi:
         return True
 
 
-    def post(self, params: str, data: Optional[Union[str, Dict[str, Any], List[Dict[str, Any]]]], msg: str) -> Dict[str, Any]:
+    def post(self, params: str, data: Optional[Union[str, Dict[str, Any]]], msg: str) -> Dict[str, Any]:
         """
         Data can be a string or a dict
         """
