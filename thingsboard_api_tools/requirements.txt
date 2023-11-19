@@ -1,0 +1,5 @@
+faker
+pydantic
+requests
+pytest
+pytz

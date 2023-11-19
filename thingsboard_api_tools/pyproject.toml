@@ -1,0 +1,11 @@
+[project]
+name = "thingsboard_api_tools"
+version = "0.5"
+
+[tool.pytest.ini_options]
+# pythonpath = "src"
+pythonpath = ["."]
+
+addopts = [
+    "--import-mode=importlib",
+]

@@ -1,0 +1,9 @@
+Metadata-Version: 2.1
+Name: thingsboard-api-tools
+Version: 0.1
+Summary: Tools for interacting with the Thingsboard API
+Home-page: https://github.com/eykamp/thingsboard_api_tools
+Author: Chris Eykamp
+Author-email: chris@eykamp.com
+License: MIT
+License-File: LICENSE

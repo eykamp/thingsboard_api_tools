@@ -3,7 +3,7 @@
 # MIT License
 
 # Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
-# documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+# documentation files (the "Software"), to deal in the Software without restriction, including without limitation the``
 # rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
 # persons to whom the Software is furnished to do so, subject to the following conditions:
 
@@ -15,46 +15,40 @@
 # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-# Update with: pip install git+git://github.com/eykamp/thingsboard_api_tools.git --upgrade
-
-# pyright: strict
-from datetime import datetime
-from typing import  Dict, List, Any, Optional, Union, TYPE_CHECKING
+from typing import  Dict, List, Any, Optional
 from pydantic import Field
-from TbModel import Id, TbObject, TbModel
 
-if TYPE_CHECKING:
-    from Customer import Customer, CustomerId
-    from TbApi import TbApi
+from .TbModel import Id, TbObject, TbModel
+from .Customer import Customer, CustomerId
+
 
 class Widget(TbModel):
-    id: Union[Id, str]      # in a DashboardDef, widgets have GUIDs for ids; other times they have full-on Id objects
+    id: Id | str | None = None     # in a DashboardDef, widgets have GUIDs for ids; other times they have full-on Id objects
     is_system_type: bool = Field(alias="isSystemType")
     bundle_alias: str = Field(alias="bundleAlias")
     type_alias: str = Field(alias="typeAlias")
     type: str
-    title: str
+    name: str = Field(alias="title")
     size_x: int = Field(alias="sizeX")
     size_y: int = Field(alias="sizeY")
     config: Dict[str, Any]
     # index: str        # TODO: Put in slots?
 
     def __str__(self) -> str:
-        return f"Widget ({self.title}, {self.type})"
-        # return f"Widget ({self.title}, {self.type}, {self.index})"
+        return f"Widget ({self.name}, {self.type})"
 
 
 class SubWidget(TbModel):      # used within States <- Layouts <- Main <- Widgets
     size_x: int = Field(alias="sizeX")
     size_y: int = Field(alias="sizeY")
-    mobile_height: Optional[int] = Field(alias="mobileHeight")
+    mobile_height: Optional[int] = Field(default=None, alias="mobileHeight")    # Sometimes missing from the TB json; default to None
     row: int
     col: int
     # index: str        # TODO: Put in slots?
 
     def __str__(self) -> str:
-        return f"SubWidget"
-        return f"SubWidget ({self.index})"
+        return "SubWidget"
+        # return f"SubWidget ({self.index})"
 
 
 class GridSetting(TbModel):        # used within States <- Layouts <- Main <- GridSetting
@@ -68,16 +62,16 @@ class GridSetting(TbModel):        # used within States <- Layouts <- Main <- Gr
     mobile_row_height: int = Field(alias="mobileRowHeight")
 
     def __str__(self) -> str:
-        return f"GridSetting"
+        return "GridSetting"
 
 
 class Layout(TbModel):      # used within States <- Layouts <- Main <- Widgets
-    widgets: Dict[str, SubWidget]
+    widgets: Dict[str, SubWidget] | List[SubWidget]             # demo.thingsboard.io has list, Sensorbot has dict
     grid_settings: GridSetting = Field(alias="gridSettings")
     # index: str          # new name of the layout
 
     def __str__(self) -> str:
-        return f"Layout ({len(self.widgets)})"
+        return f"Layout ({len(self.widgets)} widgets)"
 
 
 class State(TbModel):      # referred to in "default", the only object nested inside of States
@@ -89,24 +83,23 @@ class State(TbModel):      # referred to in "default", the only object nested in
 
     def __str__(self) -> str:
         return f"State ({self.name})"
-        # return f"State ({self.index} {self.name})"
 
 
 class Filter(TbModel):
     type: Optional[str]
     resolve_multiple: Optional[bool] = Field(alias="resolveMultiple")
-    single_entity: Optional[Id] = Field(alias="singleEntity")
-    entity_type: Optional[str] = Field(alias="entityType")
-    entity_name_filter: Optional[str] = Field(alias="entityNameFilter")
+    single_entity: Optional[Id] = Field(default=None, alias="singleEntity")     # Sometimes missing from json; default to None
+    entity_type: Optional[str] = Field(default=None, alias="entityType")        # Sometimes missing from json; default to None
+    entity_name_filter: Optional[str] = Field(default=None, alias="entityNameFilter")
 
     def __str__(self) -> str:
         return f"Filter ({self.type}, {self.single_entity.id if self.single_entity else 'Undefined ID'})"
 
 
 class EntityAlias(TbModel):
-    id: str
+    id: str | None = None
     alias: str
-    filter: Filter
+    filter: Filter | None = None
 
     # index: str
 
@@ -125,7 +118,7 @@ class Setting(TbModel):
     title_color: str = Field(alias="titleColor")
 
     def __str__(self) -> str:
-        return f"Settings ({self.dict()})"
+        return f"Settings ({self.model_dump()})"
 
 
 class RealTime(TbModel):
@@ -133,7 +126,7 @@ class RealTime(TbModel):
     time_window_ms: int = Field(alias="timewindowMs")
 
     def __str__(self) -> str:
-        return f"Timewindow ({self.dict()})"
+        return f"Real Time ({self.model_dump()})"
 
 
 class Aggregation(TbModel):
@@ -141,7 +134,7 @@ class Aggregation(TbModel):
     limit: int
 
     def __str__(self) -> str:
-        return f"Timewindow ({self.dict()})"
+        return f"Aggregation ({self.model_dump()})"
 
 
 class TimeWindow(TbModel):
@@ -149,34 +142,34 @@ class TimeWindow(TbModel):
     aggregation: Aggregation
 
     def __str__(self) -> str:
-        return f"Timewindow ({self.dict()})"
+        return f"Time Window ({self.model_dump()})"
 
 
 class Configuration(TbModel):
-    widgets: Dict[str, Widget]
-    states: Dict[str, State]
-    entity_aliases: Dict[str, EntityAlias] = Field(alias="entityAliases")
-    timewindow: TimeWindow
-    settings: Setting
+    description: str | None = None
+    widgets: Dict[str, Widget] | List[Widget] | None = None     # demo.thingsboard.io has list, Sensorbot has dict
+    states: Dict[str, State] | None = None
+    device_aliases: Dict[str, EntityAlias] | None = Field(default=None, alias="deviceAliases")  # I've seen both of these
+    entity_aliases: Dict[str, EntityAlias] | None = Field(default=None, alias="entityAliases")
+    time_window: TimeWindow | None = Field(default=None, alias="timewindow")
+    settings: Setting | None = None
     # name: str
 
     def __str__(self) -> str:
-        return f"Configuration"
+        return "Configuration"
 
 
-class Dashboard(TbObject):
-    from Customer import CustomerId
-
-    id: Id
-    created_time: datetime = Field(alias="createdTime")
+class DashboardHeader(TbObject):
+    """
+    A Dashboard with no configuration object -- what you get from TB if you request a group of dashboards.
+    """
     tenant_id: Id = Field(alias="tenantId")
-    name: Optional[str]
-    title: Optional[str]
+    name: str = Field(alias="title")
     assigned_customers: Optional[List[CustomerId]] = Field(alias="assignedCustomers")
-
-
-    def __str__(self) -> str:
-        return f"Dashboard ({self.name}, {self.title}, {self.id.id})"
+    image: Optional[str]
+    mobile_hide: Optional[bool] = Field(default=None, alias="mobileHide")
+    mobile_order: Optional[int] = Field(default=None, alias="mobileOrder")
+    external_id: Id | None = Field(default=None, alias="externalId")
 
 
     def is_public(self) -> bool:
@@ -193,27 +186,63 @@ class Dashboard(TbObject):
         return False
 
 
-    def assign_to_user(self, customer: "Customer") -> Dict[str, Any]:
+    def assign_to(self, customer: "Customer") -> None:
+        from .Customer import CustomerId
         """
         Returns dashboard definition
         """
         dashboard_id = self.id.id
         customer_id = customer.id.id
-        return self.tbapi.post(f"/api/customer/{customer_id}/dashboard/{dashboard_id}", None, f"Could not assign dashboard '{dashboard_id}' to customer '{customer_id}'")
+        resp = self.tbapi.post(f"/api/customer/{customer_id}/dashboard/{dashboard_id}", None, f"Could not assign dashboard '{dashboard_id}' to customer '{customer_id}'")
+
+        # Update customer object with new assignments
+        self.assigned_customers = []
+        for cust_data in resp["assignedCustomers"]:
+            self.assigned_customers.append(CustomerId(**cust_data))
+
+        return resp
 
 
-    # def is_public(self) -> bool:
-    #     """ Return True if device is owned by the public user, False otherwise """
-    #     pub_id = self.tbapi.get_public_user_id()
-    #     return self.customer_id == pub_id
+    def get_customers(self) -> List["Customer"]:
+        """ Returns a list of all customers assigned to the device, if any. """
+
+        custlist: List["Customer"] = []
+        for custid in self.assigned_customers or []:        # Handle None
+            cust = self.tbapi.get_customer_by_id(custid)
+            if cust:
+                custlist.append(cust)
+
+        return custlist
 
 
     def make_public(self) -> None:
-        """ Assigns device to the public customer, which is how TB makes things public. """
+        """ Assigns dashboard  to the public customer, which is how TB makes things public. """
+        if self.is_public():
+            return
+
+        self.tbapi.post(f"/api/customer/public/dashboard/{self.id.id}", None, f"Error assigning dash '{self.id.id}' to public customer")
+        # self.customer_id = Id(**obj["customerId"])
+
+        public_id = self.tbapi.get_public_user_id()
+        assert public_id        # Should never because we now have something assigned to the public user
+        if self.assigned_customers is None:
+            self.assigned_customers = []
+
+        self.assigned_customers.append(public_id)
+
+
+    def make_private(self) -> None:
+        """ Removes the public customer, which will make it visible only to assigned customers. """
         if not self.is_public():
-            self.tbapi.post(f"/api/customer/public/dashboard/{self.id.id}", None, f"Error assigning dash '{self.id.id}' to public customer")
-            # self.customer_id = Id(**obj["customerId"])
-            self.assigned_customers = [self.tbapi.get_public_user_id()]
+            return
+
+        self.tbapi.delete(f"/api/customer/public/dashboard/{self.id.id}", f"Error removing the public customer from dash '{self.id.id}'")
+        # self.customer_id = Id(**obj["customerId"])
+
+        public_id = self.tbapi.get_public_user_id()
+        assert public_id                # Should never because we now have something assigned to the public user
+        assert self.assigned_customers  # If we're public, we have at least one customer, so self.assigned_customers should never be empty or None
+        self.assigned_customers.remove(public_id)
 
 
     def get_public_url(self) -> Optional[str]:
@@ -221,15 +250,26 @@ class Dashboard(TbObject):
             return None
 
         dashboard_id = self.id.id
-        public_id = self.tbapi.get_public_user_id().id.id
 
-        return f"{self.tbapi.mothership_url}/dashboard/{dashboard_id}?publicId={public_id}"
+        public_id = self.tbapi.get_public_user_id()
+        assert public_id        # Should always be true because this item is public so the public user should exist
+
+        public_guid = public_id.id.id
+
+        return f"{self.tbapi.mothership_url}/dashboard/{dashboard_id}?publicId={public_guid}"
 
 
-    def get_definition(self) -> "DashboardDef":
+    def get_definition(self) -> "Dashboard":
         dash_id = self.id.id
         obj = self.tbapi.get(f"/api/dashboard/{dash_id}", f"Error retrieving dashboard definition for '{dash_id}'")
-        return DashboardDef(self.tbapi, **obj)
+        return Dashboard(tbapi=self.tbapi, **obj)
+
+
+    def update(self):
+        """
+        Writes object back to the database.  Use this if you want to save any modified properties.
+        """
+        return self.tbapi.post("/api/dashboard", self.model_dump_json(by_alias=True), f"Error updating '{self.id}'")
 
 
     def delete(self) -> bool:
@@ -240,17 +280,6 @@ class Dashboard(TbObject):
         return self.tbapi.delete(f"/api/dashboard/{dashboard_id}", f"Error deleting dashboard '{dashboard_id}'")
 
 
-class DashboardDef(Dashboard):
+class Dashboard(DashboardHeader):
     """ Extends Dashboard by adding a configuration. """
-    configuration: Configuration
-
-    def __str__(self) -> str:
-        return f"Dashboard Definition ({self.name}, {self.title}, {self.id.id})"
-
-
-    def delete_server_attributes(self):
-        """
-        Saves a fully formed dashboard definition
-        """
-        return self.tbapi.post("/api/dashboard", self.json(by_alias=True), "Error saving dashboard")
-
+    configuration: Configuration | None     # Empty dashboards will have no configuration
