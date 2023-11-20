@@ -14,29 +14,29 @@ tbapi = TbApi(url=mothership_url, username=thingsboard_username, password=things
 
 
 def test_get_all_dashboards():
-    tbapi.get_all_dashboards()
+    tbapi.get_all_dashboard_headers()
 
 
 def test_get_dashboard_by_id():
-    dashboard = tbapi.get_all_dashboards()[0]
-    dash = tbapi.get_dashboard_by_id(dashboard.id.id)
+    dashboard = tbapi.get_all_dashboard_headers()[0]
+    dash = tbapi.get_dashboard_header_by_id(dashboard.id.id)
 
     assert dash == dashboard
 
 
 def test_get_dashboard_by_name():
-    dashboard = tbapi.get_all_dashboards()[0]
-    assert dashboard
+    dashboard_header = tbapi.get_all_dashboard_headers()[0]
+    assert dashboard_header
 
-    dash = tbapi.get_dashboard_by_name(dashboard.name)
-    assert dash == dashboard
+    dash_header = tbapi.get_dashboard_by_name(dashboard_header.name)
+    assert dash_header == dashboard_header.get_dashboard()
 
 
-def test_copy_dashboard():
+def test_copy_dashboard_without_id():
     # We'll probably never build a dasboard from scratch (they're very complicated and very
-    # undocumented), so let's grab a dashboard def from somewhere to start with
-    dashboard = tbapi.get_all_dashboards()[0]
-    template = dashboard.get_definition()
+    # undocumented), so let's grab a dashboard configuration (the complex bit) from somewhere to start with
+    dashboard = tbapi.get_all_dashboard_headers()[0]
+    template = dashboard.get_dashboard()
 
     name = fake_dash_name()
     dash = tbapi.create_dashboard(name, template)
@@ -54,6 +54,47 @@ def test_copy_dashboard():
     assert not tbapi.get_dashboard_by_name(name)
 
 
+def test_copy_dashboard_with_id():
+    """
+    If we specify an Id for create_dashboard to use, it will overwrite an existing dashboard. It is
+    essentially an update operation.  Test that this works.
+    """
+    dashboard = target = None
+    try:
+        for dash in tbapi.get_all_dashboard_headers():
+            dashboard = dash.get_dashboard()
+            if dashboard.configuration:
+                break
+        assert dashboard
+
+        if not dashboard.configuration:     # If this happens we're going to need to create a dummy configuation to use for testing
+            assert False, "Cannot find any dashboards that have a configuration -- easiest fix is to configure a widget on an existing dashboard on the test system"
+
+        template_dash = dashboard.get_dashboard()
+
+        # Create a target dashboard
+        target = tbapi.create_dashboard(fake_dash_name())
+
+        name = fake_dash_name()
+        dash = tbapi.create_dashboard(name, template_dash, target.id)
+
+        assert dash.id == target.id
+        assert dash.name == name
+        assert dash.configuration == template_dash.configuration
+
+        # Double check
+        dash = tbapi.get_dashboard_by_id(target.id)
+        assert dash.name == name
+        assert dash.configuration == template_dash.configuration
+
+    except Exception:
+        raise
+
+    finally:
+        if target:
+            assert target.delete()
+
+
 def test_saving():
     dash = tbapi.create_dashboard(fake_dash_name())
 
@@ -63,10 +104,10 @@ def test_saving():
         dash.mobile_order = new_order               # Change the attribute
 
         # Verify the attribute hasn't changed on the server
-        dash2 = tbapi.get_dashboard_by_id(dash.id)
+        dash2 = tbapi.get_dashboard_header_by_id(dash.id)
         assert dash2.mobile_order == old_order
         dash.update()
-        dash2 = tbapi.get_dashboard_by_id(dash.id)
+        dash2 = tbapi.get_dashboard_header_by_id(dash.id)
         assert dash2.mobile_order == new_order
 
     finally:
@@ -111,8 +152,8 @@ def test_get_public_url():
 
 
 def test_get_config_for_dashboard():
-    dash = tbapi.get_all_dashboards()[0]
-    dash_def = dash.get_definition()        # Get the full dashboard, including its configuration
+    dash = tbapi.get_all_dashboard_headers()[0]
+    dash_def = dash.get_dashboard()        # Get the full dashboard, including its configuration
 
     # A dash_def is just a Dashboard with a configuration object
     dict1 = dash.model_dump()
@@ -125,12 +166,11 @@ def test_dashboard_with_no_widgets():
     dash = tbapi.create_dashboard(fake_dash_name())
     assert dash.configuration is None       # Dashboards with no widgets have no configuration
 
-    dash_def = dash.get_definition()
+    dash_def = dash.get_dashboard()
     assert dash_def.configuration is None
 
     assert dash.delete()
 
 
-
-def fake_dash_name():
+def fake_dash_name() -> str:
     return "__TEST_DASH__ " + fake.name()

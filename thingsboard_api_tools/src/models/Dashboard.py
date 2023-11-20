@@ -259,7 +259,7 @@ class DashboardHeader(TbObject):
         return f"{self.tbapi.mothership_url}/dashboard/{dashboard_id}?publicId={public_guid}"
 
 
-    def get_definition(self) -> "Dashboard":
+    def get_dashboard(self) -> "Dashboard":
         dash_id = self.id.id
         obj = self.tbapi.get(f"/api/dashboard/{dash_id}", f"Error retrieving dashboard definition for '{dash_id}'")
         return Dashboard(tbapi=self.tbapi, **obj)
