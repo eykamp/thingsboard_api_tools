@@ -155,10 +155,10 @@ class TbApi:
 
     def get_dashboard_by_name(self, dash_name: str):
         """ Returns dashboard with specified name, or None if we can't find one """
-        dashes = self.get_dashboard_headers_by_name(dash_name)
-        for dash in dashes:
-            if dash.name == dash_name:
-                return dash.get_dashboard()
+        headers = self.get_dashboard_headers_by_name(dash_name)
+        for header in headers:
+            if header.name == dash_name:
+                return header.get_dashboard()
 
         return None
 
