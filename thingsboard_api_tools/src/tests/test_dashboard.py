@@ -36,13 +36,13 @@ def test_copy_dashboard():
     # We'll probably never build a dasboard from scratch (they're very complicated and very
     # undocumented), so let's grab a dashboard def from somewhere to start with
     dashboard = tbapi.get_all_dashboards()[0]
-    dash_def = dashboard.get_definition()
+    template = dashboard.get_definition()
 
     name = fake_dash_name()
-    dash = tbapi.create_dashboard(name, dash_def)
+    dash = tbapi.create_dashboard(name, template)
 
     j1 = dash.model_dump()
-    j2 = dash_def.model_dump()
+    j2 = template.model_dump()
 
     # New dashboard we just created should be the same as the source dashboard, except for a few fields
     del j1["id"], j2["id"], j1["name"], j2["name"]
