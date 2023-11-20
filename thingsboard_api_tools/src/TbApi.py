@@ -153,7 +153,7 @@ class TbApi:
         return dashes
 
 
-    def get_dashboard_by_name(self, dash_name: str):
+    def get_dashboard_by_name(self, dash_name: str) -> Optional["Dashboard"]:
         """ Returns dashboard with specified name, or None if we can't find one """
         headers = self.get_dashboard_headers_by_name(dash_name)
         for header in headers:
