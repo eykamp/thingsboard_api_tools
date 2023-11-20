@@ -103,29 +103,29 @@ class TbApi:
         return self.public_user_id
 
 
-    def create_dashboard(self, name: str, dash_def: Optional["Dashboard"] = None):
+    def create_dashboard(self, name: str, template: Optional["Dashboard"] = None, id: Optional["Id"] = None):
         """
-        Returns DashboardDef
+        Returns a Dashboard (including configuration)
         """
 
         from .models.Dashboard import Dashboard
 
         data: dict[str, Any] = {
-            # "configuration": dash_def.configuration.model_dump(by_alias=True),
             "title": name,
         }
 
-        if dash_def and dash_def.configuration:
-            data["configuration"] = dash_def.configuration.model_dump(by_alias=True)
+        if template and template.configuration:
+            data["configuration"] = template.configuration.model_dump(by_alias=True)
 
+        if id:
+            data["id"] = id.model_dump(by_alias=True)
 
         # Update the configuration
         obj = self.post("/api/dashboard", data, "Error creating new dashboard")
-        obj["configuration"] = obj["configuration"]     # We need to hydrate this string for the parser to work
         return Dashboard(tbapi=self, **obj)
 
 
-    def get_all_dashboards(self):
+    def get_all_dashboard_headers(self):
         """
         Return a list of all dashboards in the system
         """
@@ -135,7 +135,7 @@ class TbApi:
         return self.tb_objects_from_list(all_results, DashboardHeader)
 
 
-    def get_dashboards_by_name(self, dash_name_prefix: str):
+    def get_dashboard_headers_by_name(self, dash_name_prefix: str):
         """
         Returns a list of all dashes starting with the specified name
         """
@@ -155,15 +155,19 @@ class TbApi:
 
     def get_dashboard_by_name(self, dash_name: str):
         """ Returns dashboard with specified name, or None if we can't find one """
-        dashes = self.get_dashboards_by_name(dash_name)
+        dashes = self.get_dashboard_headers_by_name(dash_name)
         for dash in dashes:
             if dash.name == dash_name:
-                return dash
+                return dash.get_dashboard()
 
         return None
 
 
     def get_dashboard_by_id(self, dash_id: Union["Id", str]):
+        return self.get_dashboard_header_by_id(dash_id).get_dashboard()
+
+
+    def get_dashboard_header_by_id(self, dash_id: Union["Id", str]):
         """
         Retrieve dashboard by id
         """
