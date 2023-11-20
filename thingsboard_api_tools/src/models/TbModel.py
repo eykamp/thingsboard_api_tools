@@ -111,9 +111,10 @@ class Attributes(Dict[str, Attribute]):
         self.scope = scope
 
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
         """ Collapse Attributes into a simple key/value dictionary. """
-        attr_dict: Dict[str, Any] = {}
+        attr_dict: dict[str, Any] = {}
+
         for attribute in self.values():
             attr_dict[attribute.key] = attribute.value
         return attr_dict
