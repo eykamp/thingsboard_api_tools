@@ -15,7 +15,7 @@
 # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-from typing import  Optional, Dict, List, Any, Union, Type, TypeVar, TYPE_CHECKING
+from typing import  Optional, Any, Union, Type, TypeVar, TYPE_CHECKING
 
 import json as Json
 import requests
@@ -153,7 +153,7 @@ class TbApi:
         url = f"/api/tenant/dashboards?textSearch={dash_name_prefix}"
         objs = self.get_paged(url, f"Error retrieving dashboards starting with '{dash_name_prefix}'")
 
-        dashes: List[DashboardHeader] = []
+        dashes: list[DashboardHeader] = []
 
         for obj in objs:
             dashes.append(DashboardHeader(tbapi=self, **obj))
@@ -260,7 +260,7 @@ class TbApi:
 
         cust_datas = self.get_paged(f"/api/customers?textSearch={cust_name_prefix}", f"Error retrieving customers with names starting with '{cust_name_prefix}'")
 
-        customers: List[Customer] = []
+        customers: list[Customer] = []
         for cust_data in cust_datas:
             # Sometimes this comes in as a dict, sometimes as a string.  Not sure why.
             if cust_data["additionalInfo"] is not None and not isinstance(cust_data["additionalInfo"], dict):
@@ -306,16 +306,16 @@ class TbApi:
         # device_profile_id: Id,        # Can't make this work
         # software_id: Optional[Id],    # Can't make this work -- probably done via another endpoint
         # firmware_id: Optional[Id],    # Can't make this work -- probably done via another endpoint
-        additional_info: Optional[Dict[str, Any]] = None,
+        additional_info: Optional[dict[str, Any]] = None,
         customer: Optional["Customer"] = None,
-        shared_attributes: Optional[Dict[str, Any]] = None,
-        server_attributes: Optional[Dict[str, Any]] = None,
+        shared_attributes: Optional[dict[str, Any]] = None,
+        server_attributes: Optional[dict[str, Any]] = None,
     ):
         """ Factory method. """
 
         from .models.Device import Device
 
-        data: Dict[str, Any] = {
+        data: dict[str, Any] = {
             "name": name,
             "label": label,
             "type": type,
@@ -473,7 +473,7 @@ class TbApi:
 
 
     # TODO: create Asset object
-    def add_asset(self, asset_name:str, asset_type:str, shared_attributes: Dict[str, Any] | None, server_attributes: Dict[str, Any] | None):
+    def add_asset(self, asset_name:str, asset_type:str, shared_attributes: dict[str, Any] | None, server_attributes: dict[str, Any] | None):
         data = {
             "name": asset_name,
             "type": asset_type
@@ -497,7 +497,7 @@ class TbApi:
         """ Gets info about the user whose credentials are running this API. """
         from .models.User import User
 
-        obj: Dict[str, Any] = self.get_paged("/api/users", "Error fetching info about current user")[0]
+        obj: dict[str, Any] = self.get_paged("/api/users", "Error fetching info about current user")[0]
         return User(tbapi=self, **obj)
 
 
@@ -505,9 +505,9 @@ class TbApi:
         return self.get_current_user().tenant_id
 
 
-    def tb_objects_from_list(self, json_list: List[Dict[str, Any]], object_type: Type[T]) -> list[T]:
+    def tb_objects_from_list(self, json_list: list[dict[str, Any]], object_type: Type[T]) -> list[T]:
         """ Given a list of json strings and a type, return a list of rehydrated objects of that type. """
-        objects: List[T] = []
+        objects: list[T] = []
         for jsn in json_list:
             objects.append(object_type(tbapi=self, **jsn))
         return objects
@@ -523,15 +523,15 @@ class TbApi:
         print(f"{request.method} {request.path_url}\nHeaders:\n{headers}\nBody:\n{body}")
 
 
-    def add_auth_header(self, headers: Dict[str, str]):
+    def add_auth_header(self, headers: dict[str, str]):
         """ Modifies headers """
         headers["X-Authorization"] = "Bearer " + self.get_token()
 
 
-    def get_paged(self, params: str, msg: str) -> List[Dict[str, Any]]:
+    def get_paged(self, params: str, msg: str) -> list[dict[str, Any]]:
         """ Make requests to get data that might span multiple pages.  Mostly intended for internal use. """
         page_size = 100
-        all_data: List[Dict[str, Any]] = []
+        all_data: list[dict[str, Any]] = []
         page = 0
 
         if "?" in params:
@@ -552,7 +552,7 @@ class TbApi:
         return all_data
 
 
-    def get(self, params: str, msg: str) -> Any:            # List[Dict[str, Any]] ??
+    def get(self, params: str, msg: str) -> Any:            # list[dict[str, Any]] ??
         if self.mothership_url is None:     # type: ignore
             raise ConfigurationError("Cannot retrieve data without a URL: create a file called config.py and define 'mothership_url' to point to your Thingsboard server.\nExample: mothership_url = 'http://www.thingsboard.org:8080'")
         url = self.mothership_url + params
@@ -591,7 +591,7 @@ class TbApi:
         return True
 
 
-    def post(self, params: str, data: Optional[Union[str, Dict[str, Any]]], msg: str) -> Any:
+    def post(self, params: str, data: Optional[Union[str, dict[str, Any]]], msg: str) -> Any:
         """ Data can be a string or a dict """
         url = self.mothership_url + params
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -632,8 +632,8 @@ class TokenError(Exception):
 
 U = TypeVar("U", "Customer", "Device", "DeviceProfile", "DeviceProfileInfo")
 
-def _exact_match(name: str, object_list: List[U]) -> Optional[U]:
-    matches: List[U] = []
+def _exact_match(name: str, object_list: list[U]) -> Optional[U]:
+    matches: list[U] = []
     for obj in object_list:
         if obj.name == name:
             matches.append(obj)
