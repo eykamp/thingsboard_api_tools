@@ -419,9 +419,7 @@ class TbApi:
 
 
     def get_device_profiles_by_name(self, device_profile_name_prefix: str):
-        """
-        Returns a list of all DeviceProfiles starting with the specified name
-        """
+        """ Returns a list of all DeviceProfiles starting with the specified name """
         from .models.DeviceProfile import DeviceProfile
 
         data = self.get_paged(f"/api/deviceProfiles?textSearch={device_profile_name_prefix}", f"Error fetching DeviceProfiles with name matching '{device_profile_name_prefix}'")
@@ -526,9 +524,7 @@ class TbApi:
 
 
     def add_auth_header(self, headers: Dict[str, str]):
-        """
-        Modifies headers
-        """
+        """ Modifies headers """
         headers["X-Authorization"] = "Bearer " + self.get_token()
 
 
@@ -596,9 +592,7 @@ class TbApi:
 
 
     def post(self, params: str, data: Optional[Union[str, Dict[str, Any]]], msg: str) -> Any:
-        """
-        Data can be a string or a dict
-        """
+        """ Data can be a string or a dict """
         url = self.mothership_url + params
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
         self.add_auth_header(headers)
