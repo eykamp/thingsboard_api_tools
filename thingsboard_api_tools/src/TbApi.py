@@ -587,7 +587,7 @@ class TbApi:
         response = requests.delete(url, headers=headers)
 
         # Don't fail if not found
-        if(response.status_code == HTTPStatus.NOT_FOUND):
+        if response.status_code == HTTPStatus.NOT_FOUND:
             return False
 
         self.validate_response(response, msg)
