@@ -66,7 +66,7 @@ class TbApi:
         try:
             response = requests.post(url, data=data, headers=headers)
         except requests.ConnectTimeout as ex:
-            ex.args = ("Could not connect to sensorbot.org.  Is the server up?", *ex.args)
+            ex.args = (f"Could not connect to server (url='{url}').  Is it up?", *ex.args)
             raise
 
 
