@@ -53,7 +53,7 @@ class Customer(TbObject, HasAttributes):
     country: Optional[str]
     email: Optional[str]
     phone: Optional[str]
-    additional_info: Optional[Dict[str, Any]] = Field(alias="additionalInfo")
+    additional_info: Optional[Dict[str, Any]] = Field(default={}, alias="additionalInfo")
 
 
     def update(self):
@@ -86,7 +86,7 @@ class Customer(TbObject, HasAttributes):
 
     def get_devices(self) -> List["Device"]:
         """
-        Returns a list of all devices associated with a customer
+        Returns a list of all devices associated with a customer; will not include public devices!
         """
         from .Device import Device
         cust_id = self.id.id

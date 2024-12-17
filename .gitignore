@@ -5,3 +5,4 @@ thingsboard_api_tools/config.py
 vnv.bat
 .venv/
 typings
+build/

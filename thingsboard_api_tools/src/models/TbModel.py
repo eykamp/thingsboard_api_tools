@@ -69,9 +69,9 @@ class Id(TbModel):
 
 class TbObject(TbModel):
     id: Id
-    created_time: datetime = Field(default=None, alias="createdTime", exclude=True)       # Read-only attribute
+    created_time: datetime | None = Field(default=None, alias="createdTime", exclude=True)       # Read-only attribute
 
-    tbapi: TbApi = Field(default=None, exclude=True)
+    tbapi: TbApi = Field(exclude=True)
 
 
     def __str__(self) -> str:

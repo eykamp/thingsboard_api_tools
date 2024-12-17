@@ -1,9 +1,10 @@
+from typing import Any
 from faker import Faker     # type: ignore
 from requests import HTTPError
 from datetime import datetime, timezone
 
 
-from ..TbApi import TbApi
+from src.TbApi import TbApi
 
 from config import mothership_url, thingsboard_username, thingsboard_password
 
@@ -20,7 +21,7 @@ def test_server_attributes():
     """ This will work the same for any model inheriting from HasAttributes; no need to test them all. """
 
     attr_names = ["testattr", "testattr2", "new_test_attr"]
-    attr_dict = {attr_names[0]: fake.pyint(), attr_names[1]: fake.pystr()}
+    attr_dict: dict[str, Any] = {attr_names[0]: fake.pyint(), attr_names[1]: fake.pystr()}
 
     cust = tbapi.create_customer(name=fake_cust_name(), server_attributes=attr_dict)
 

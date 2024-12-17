@@ -3,6 +3,7 @@ README.md
 setup.py
 thingsboard_api_tools/__init__.py
 thingsboard_api_tools/config.py
+thingsboard_api_tools/py.typed
 thingsboard_api_tools.egg-info/PKG-INFO
 thingsboard_api_tools.egg-info/SOURCES.txt
 thingsboard_api_tools.egg-info/dependency_links.txt

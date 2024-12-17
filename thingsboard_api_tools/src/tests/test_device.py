@@ -1,7 +1,7 @@
 from faker import Faker     # type: ignore
 
-from ..models.Device import Device
-from ..TbApi import TbApi
+from src.models.Device import Device
+from src.TbApi import TbApi
 
 from config import mothership_url, thingsboard_username, thingsboard_password
 
@@ -24,14 +24,14 @@ def test_create_device():
     Also tests  get_device_by_name(name), get_server_attributes(), get_shared_attributes(), device.delete()
     """
     name = fake_device_name() + " " + fake.name()
-    server_attributes=fake.pydict(4, allowed_types=(str, int))
-    shared_attributes=fake.pydict(4, allowed_types=(str, int))
+    server_attributes = fake.pydict(4, allowed_types=(str, int))    # type: ignore
+    shared_attributes = fake.pydict(4, allowed_types=(str, int))    # type: ignore
 
     device = tbapi.create_device(
         name=name,
         type=fake.company(),
         label=fake.bban(),
-        additional_info=fake.pydict(3, allowed_types=(str, int, float)),
+        additional_info=fake.pydict(3, allowed_types=(str, int, float)),            # type: ignore
         customer=None,
         server_attributes=server_attributes,
         shared_attributes=shared_attributes,
@@ -69,8 +69,8 @@ def test_create_device_with_customer():
     Also tests  get_device_by_name(name)
     """
     name = fake_device_name() + " " + fake.name()
-    server_attributes=fake.pydict(4, allowed_types=(str, int))
-    shared_attributes=fake.pydict(4, allowed_types=(str, int))
+    server_attributes = fake.pydict(4, allowed_types=(str, int))        # type: ignore
+    shared_attributes = fake.pydict(4, allowed_types=(str, int))        # type: ignore
 
     customer = tbapi.get_all_customers()[0]
 
@@ -78,7 +78,7 @@ def test_create_device_with_customer():
         name=name,
         type=fake.company(),
         label=fake.bban(),
-        additional_info=fake.pydict(3, allowed_types=(str, int, float)),
+        additional_info=fake.pydict(3, allowed_types=(str, int, float)),        # type: ignore
         customer=customer,
         server_attributes=server_attributes,
         shared_attributes=shared_attributes,

@@ -27,13 +27,12 @@ if TYPE_CHECKING:
     from .models.Dashboard import Dashboard
     from .models.Device import Device
     from .models.DeviceProfile import DeviceProfile, DeviceProfileInfo
-    from .models.TbModel import Id
+    from .models.TbModel import Id, TbObject
 
 MINUTES = 60
 
 
-T = TypeVar("T")
-
+T = TypeVar("T", bound="TbObject")      # T can be any subclass of TbObject
 
 class TbApi:
     NULL_GUID = "13814000-1dd2-11b2-8080-808080808080"      # From EntityId.java in TB codebase
@@ -48,7 +47,7 @@ class TbApi:
         self.token: str | None = None
 
         self.verbose: bool = False
-        self.public_user_id: "CustomerId" | None = None
+        self.public_user_id: "CustomerId | None" = None
 
 
     def get_token(self) -> str:
@@ -64,10 +63,19 @@ class TbApi:
         # json = post("/api/auth/login", None, data, "Error requesting token")
 
         url = self.mothership_url + "/api/auth/login"
-        response = requests.post(url, data=data, headers=headers)
+        try:
+            response = requests.post(url, data=data, headers=headers)
+        except requests.ConnectTimeout as ex:
+            ex.args = ("Could not connect to sensorbot.org.  Is the server up?", *ex.args)
+            raise
+
+
         self.validate_response(response, "Error requesting token")
 
         self.token = Json.loads(response.text)["token"]
+        if not self.token:
+            raise TokenError("No token received from server")
+
         self.token_time = time.time()
 
         return self.token
@@ -200,7 +208,7 @@ class TbApi:
         """ Factory method. """
         from .models.Customer import Customer
 
-        data = {
+        data: dict[str, Any] = {
             "title": name,
             # "tenantId": tenant_id.model_dump(),       # Can't get this to work
             "address": address,
@@ -621,6 +629,10 @@ class TbApi:
 
 
 class ConfigurationError(Exception):
+    pass
+
+
+class TokenError(Exception):
     pass
 
 

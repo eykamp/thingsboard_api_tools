@@ -1,6 +1,6 @@
-from ..TbApi import TbApi
-from ..models.TbModel import Id
-from ..models.User import User
+from src.TbApi import TbApi
+from src.models.TbModel import Id
+from src.models.User import User
 
 from config import mothership_url, thingsboard_username, thingsboard_password
 

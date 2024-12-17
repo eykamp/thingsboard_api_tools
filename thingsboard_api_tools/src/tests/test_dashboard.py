@@ -1,6 +1,6 @@
 from faker import Faker     # type: ignore
 
-from ..TbApi import TbApi
+from src.TbApi import TbApi
 from config import mothership_url, thingsboard_username, thingsboard_password
 
 assert mothership_url

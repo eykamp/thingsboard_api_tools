@@ -38,7 +38,7 @@ class Tenant(TbObject, HasAttributes):
 
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Tenant):
+        if not isinstance(other, Tenant):       # Probably superfluous -- ids are guids so won't collide
             return False
 
         return self.id == other.id

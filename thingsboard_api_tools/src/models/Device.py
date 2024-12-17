@@ -42,7 +42,7 @@ class AggregationType(Enum):
 
 
 class Device(TbObject, HasAttributes):
-    additional_info: Optional[Dict[str, Any]] = Field(alias="additionalInfo")
+    additional_info: Optional[Dict[str, Any]] = Field(default={}, alias="additionalInfo")
     tenant_id: Id = Field(alias="tenantId")
     customer_id: Id = Field(alias="customerId")
     name: Optional[str]

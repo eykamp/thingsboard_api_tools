@@ -5,9 +5,9 @@ import requests
 from datetime import datetime, timezone
 
 
-from ..models.Customer import Customer
-from ..TbApi import TbApi
-from ..models.TbModel import Id
+from src.models.Customer import Customer
+from src.TbApi import TbApi
+from src.models.TbModel import Id
 
 from config import mothership_url, thingsboard_username, thingsboard_password
 
@@ -104,6 +104,7 @@ def test_created_time():
     # because server time differs from our time. Hence the ugliness.
     c = tbapi.create_customer(fake_cust_name())
     msg = f"{datetime.now(timezone.utc)}, {c.created_time}"
+    assert c.created_time
     assert (datetime.now(timezone.utc) - c.created_time).seconds < 10 or (c.created_time - datetime.now(timezone.utc)).seconds < 10, msg
     assert c.delete()       # Cleanup
 
