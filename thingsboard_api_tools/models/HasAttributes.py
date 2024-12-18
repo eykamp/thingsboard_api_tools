@@ -1,7 +1,7 @@
 from typing import  Union, Iterable, Dict, Any, cast
 
 from .TbModel import Attributes
-from ..TbApi import TbApi
+import TbApi
 
 
 

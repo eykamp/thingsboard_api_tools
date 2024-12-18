@@ -3,8 +3,8 @@ from datetime import datetime
 import time
 import json as Json
 
-from src.models.Device import prepare_ts
-from src.TbApi import TbApi
+from models.Device import prepare_ts
+from TbApi import TbApi
 
 from config import mothership_url, thingsboard_username, thingsboard_password
 

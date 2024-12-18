@@ -4,7 +4,7 @@ from requests import HTTPError
 from datetime import datetime, timezone
 
 
-from src.TbApi import TbApi
+from TbApi import TbApi
 
 from config import mothership_url, thingsboard_username, thingsboard_password
 

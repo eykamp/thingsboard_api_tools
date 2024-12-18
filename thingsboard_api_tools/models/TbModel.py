@@ -20,7 +20,7 @@ from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field
 import pytz
-from ..TbApi import TbApi
+import TbApi
 
 TIMEZONE = pytz.timezone("US/Pacific")
 

@@ -18,15 +18,15 @@
 # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-from .src.TbApi import TbApi
-from .src.models.TbModel import Id, Attributes
-from .src.models.Customer import Customer, CustomerId
-from .src.models.Dashboard import DashboardHeader, Dashboard
-from .src.models.TbModel import TbObject
-from .src.models.Device import Device, AggregationType
-from .src.models.DeviceProfile import DeviceProfile, DeviceProfileInfo
-from .src.models.TelemetryRecord import TelemetryRecord
-from .src.EntityType import EntityType
+from TbApi import TbApi
+from models.TbModel import Id, Attributes
+from models.Customer import Customer, CustomerId
+from models.Dashboard import DashboardHeader, Dashboard
+from models.TbModel import TbObject
+from models.Device import Device, AggregationType
+from models.DeviceProfile import DeviceProfile, DeviceProfileInfo
+from models.TelemetryRecord import TelemetryRecord
+from EntityType import EntityType
 
 __all__ = [
     "EntityType",

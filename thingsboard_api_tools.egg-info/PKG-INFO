@@ -1,9 +1,14 @@
 Metadata-Version: 2.1
 Name: thingsboard_api_tools
-Version: 0.1
+Version: 0.2
 Summary: Tools for interacting with the Thingsboard API
 Home-page: https://github.com/eykamp/thingsboard_api_tools
 Author: Chris Eykamp
 Author-email: chris@eykamp.com
 License: MIT
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.10
 License-File: LICENSE
+Requires-Dist: requests

@@ -5,9 +5,9 @@ import requests
 from datetime import datetime, timezone
 
 
-from src.models.Customer import Customer
-from src.TbApi import TbApi
-from src.models.TbModel import Id
+from models.Customer import Customer
+from TbApi import TbApi
+from models.TbModel import Id
 
 from config import mothership_url, thingsboard_username, thingsboard_password
 

@@ -1,7 +1,7 @@
 from faker import Faker     # type: ignore
 
-from src.models.Device import Device
-from src.TbApi import TbApi
+from models.Device import Device
+from TbApi import TbApi
 
 from config import mothership_url, thingsboard_username, thingsboard_password
 
