@@ -41,4 +41,3 @@ There are tons of simple examples of how to to use this library in the test code
     telemetry = device.get_telemetry()
     print(telemetry)
 ```
-
