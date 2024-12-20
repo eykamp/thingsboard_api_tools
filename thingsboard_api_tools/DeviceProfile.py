@@ -17,8 +17,13 @@
 
 from typing import  Any
 from pydantic import Field
-from .TbModel import TbObject, Id
-from .HasAttributes import HasAttributes
+
+try:
+    from .TbModel import TbObject, Id
+    from .HasAttributes import HasAttributes
+except (ModuleNotFoundError, ImportError):
+    from TbModel import TbObject, Id
+    from HasAttributes import HasAttributes
 
 
 class DeviceProfileInfo(TbObject, HasAttributes):

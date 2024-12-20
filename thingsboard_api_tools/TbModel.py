@@ -20,7 +20,12 @@ from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field
 import pytz
-import TbApi
+
+try:
+    from .TbApi import TbApi
+except (ModuleNotFoundError, ImportError):
+    from TbApi import TbApi
+
 
 TIMEZONE = pytz.timezone("US/Pacific")
 
@@ -48,7 +53,10 @@ class Id(TbModel):
 
 
     def __eq__(self, other: Any) -> bool:
-        from .Customer import CustomerId
+        try:
+            from .Customer import CustomerId
+        except ModuleNotFoundError:
+            from Customer import CustomerId
 
         if isinstance(other, CustomerId):
             return self.id == other.id.id

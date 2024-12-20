@@ -19,14 +19,20 @@ from typing import  Optional, Dict, List, Any, Union, Iterable, TYPE_CHECKING
 from datetime import datetime
 from enum import Enum
 from pydantic import Field
-from .TbModel import TbObject, Id
-from .HasAttributes import HasAttributes
-from .DeviceProfile import DeviceProfile, DeviceProfileInfo
+
+try:
+    from .TbModel import TbObject, Id
+    from .HasAttributes import HasAttributes
+    from .DeviceProfile import DeviceProfile, DeviceProfileInfo
+except (ModuleNotFoundError, ImportError):
+    from TbModel import TbObject, Id
+    from HasAttributes import HasAttributes
+    from DeviceProfile import DeviceProfile, DeviceProfileInfo
 
 
 if TYPE_CHECKING:
-    from .TbModel import TbApi
-    from .Customer import Customer
+    from TbModel import TbApi
+    from Customer import Customer
 
 
 Timestamp = Union[datetime, float]

@@ -17,17 +17,23 @@
 
 from typing import  Optional, Dict, List, Any, TYPE_CHECKING
 from pydantic import Field       # pip install pydantic
-from .HasAttributes import HasAttributes
-from .TbModel import TbModel, Id, TbObject
+
+try:
+    from .HasAttributes import HasAttributes
+    from .TbModel import TbModel, Id, TbObject
+except (ModuleNotFoundError, ImportError):
+    from HasAttributes import HasAttributes
+    from TbModel import TbModel, Id, TbObject
+
 
 if TYPE_CHECKING:
-    from .Device import Device
+    from Device import Device
 
 
 class CustomerId(TbModel):
     """ This is an Id with couple of extra fields. """
 
-    # from .TbModel import TbModel, Id, TbObject
+    # from TbModel import TbModel, Id, TbObject
 
     id: Id = Field(alias="customerId")
     public: bool
@@ -88,7 +94,11 @@ class Customer(TbObject, HasAttributes):
         """
         Returns a list of all devices associated with a customer; will not include public devices!
         """
-        from .Device import Device
+        try:
+            from .Device import Device
+        except ModuleNotFoundError:
+            from Device import Device
+
         cust_id = self.id.id
 
         all_results = self.tbapi.get_paged(f"/api/customer/{cust_id}/devices", f"Error retrieving devices for customer '{cust_id}'")

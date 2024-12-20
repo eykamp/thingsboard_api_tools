@@ -18,8 +18,12 @@
 from typing import  Dict, List, Any, Optional
 from pydantic import Field
 
-from .TbModel import Id, TbObject, TbModel
-from .Customer import Customer, CustomerId
+try:
+    from .TbModel import Id, TbObject, TbModel
+    from .Customer import Customer, CustomerId
+except (ModuleNotFoundError, ImportError):
+    from TbModel import Id, TbObject, TbModel
+    from Customer import Customer, CustomerId
 
 
 class Widget(TbModel):
@@ -187,7 +191,11 @@ class DashboardHeader(TbObject):
 
 
     def assign_to(self, customer: "Customer") -> None:
-        from .Customer import CustomerId
+        try:
+            from .Customer import CustomerId
+        except ModuleNotFoundError:
+            from Customer import CustomerId
+
         """
         Returns dashboard definition
         """

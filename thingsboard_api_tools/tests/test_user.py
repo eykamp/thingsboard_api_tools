@@ -1,8 +1,8 @@
 from TbApi import TbApi
-from models.TbModel import Id
-from models.User import User
+from TbModel import Id
+from User import User
 
-from config import mothership_url, thingsboard_username, thingsboard_password
+from .config import mothership_url, thingsboard_username, thingsboard_password
 
 assert mothership_url
 assert thingsboard_username

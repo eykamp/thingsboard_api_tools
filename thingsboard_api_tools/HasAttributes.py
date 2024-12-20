@@ -1,8 +1,11 @@
 from typing import  Union, Iterable, Dict, Any, cast
 
-from .TbModel import Attributes
-import TbApi
-
+try:
+    from .TbModel import Attributes
+    from .TbApi import TbApi
+except (ModuleNotFoundError, ImportError):
+    from TbModel import Attributes
+    from TbApi import TbApi
 
 
 class HasAttributes():
@@ -15,7 +18,11 @@ class HasAttributes():
         """
         Posts the attributes provided (use dict format) to the server in the Server scope
         """
-        from .TbModel import TbObject
+        try:
+            from .TbModel import TbObject
+        except ModuleNotFoundError:
+            from TbModel import TbObject
+
         assert isinstance(self, TbObject)
 
 
@@ -24,7 +31,11 @@ class HasAttributes():
 
     def get_server_attributes(self) -> Attributes:
         """ Returns a list of the device's attributes in a the Server scope. """
-        from .TbModel import TbObject
+        try:
+            from .TbModel import TbObject
+        except ModuleNotFoundError:
+            from TbModel import TbObject
+
         assert isinstance(self, TbObject)
 
 
@@ -33,7 +44,11 @@ class HasAttributes():
 
     def delete_server_attributes(self, attributes: Union[str, Iterable[str]]) -> bool:
         """ Pass an attribute name or a list of attributes to be deleted from the specified scope """
-        from .TbModel import TbObject
+        try:
+            from .TbModel import TbObject
+        except ModuleNotFoundError:
+            from TbModel import TbObject
+
         assert isinstance(self, TbObject)
 
         return self._delete_attributes(attributes, Attributes.Scope.SERVER)
@@ -41,7 +56,11 @@ class HasAttributes():
 
     def delete_attributes(self, attributes: Union[str, Iterable[str]], scope: Attributes.Scope) -> bool:
         """ Pass an attribute name or a list of attributes to be deleted from the specified scope """
-        from .TbModel import TbObject
+        try:
+            from .TbModel import TbObject
+        except ModuleNotFoundError:
+            from TbModel import TbObject
+
         assert isinstance(self, TbObject)
 
         return self._delete_attributes(attributes, scope)
@@ -50,7 +69,11 @@ class HasAttributes():
     # Get attributes from the server
     def get_shared_attributes(self) -> Attributes:
         """ Returns a list of the device's attributes in a the Shared scope. """
-        from .TbModel import TbObject
+        try:
+            from .TbModel import TbObject
+        except ModuleNotFoundError:
+            from TbModel import TbObject
+
         assert isinstance(self, TbObject)
 
         return self._get_attributes(Attributes.Scope.SHARED)
@@ -61,7 +84,11 @@ class HasAttributes():
         """
         Posts the attributes provided (use dict format) to the server in the Shared scope
         """
-        from .TbModel import TbObject
+        try:
+            from .TbModel import TbObject
+        except ModuleNotFoundError:
+            from TbModel import TbObject
+
         assert isinstance(self, TbObject)
 
         self._set_attributes(attributes, Attributes.Scope.SHARED)
@@ -70,7 +97,11 @@ class HasAttributes():
     # Delete attributes from the server
     def delete_shared_attributes(self, attributes: Union[str, Iterable[str]]) -> bool:
         """ Pass an attribute name or a list of attributes to be deleted from the specified scope """
-        from .TbModel import TbObject
+        try:
+            from .TbModel import TbObject
+        except ModuleNotFoundError:
+            from TbModel import TbObject
+
         assert isinstance(self, TbObject)
 
         return self._delete_attributes(attributes, Attributes.Scope.SHARED)
@@ -78,7 +109,11 @@ class HasAttributes():
 
     def get_client_attributes(self) -> Attributes:
         """ Returns a list of the device's attributes in a the Client scope. """
-        from .TbModel import TbObject
+        try:
+            from .TbModel import TbObject
+        except ModuleNotFoundError:
+            from TbModel import TbObject
+
         assert isinstance(self, TbObject)
 
         return self._get_attributes(Attributes.Scope.CLIENT)
@@ -86,7 +121,11 @@ class HasAttributes():
 
     def delete_client_attributes(self, attributes: Union[str, Iterable[str]]) -> bool:
         """ Pass an attribute name or a list of attributes to be deleted from the specified scope """
-        from .TbModel import TbObject
+        try:
+            from .TbModel import TbObject
+        except ModuleNotFoundError:
+            from TbModel import TbObject
+
         assert isinstance(self, TbObject)
 
         return self._delete_attributes(attributes, Attributes.Scope.CLIENT)
@@ -94,7 +133,10 @@ class HasAttributes():
 
     def _set_attributes(self, attributes: Union["Attributes", Dict[str, Any]], scope: Attributes.Scope):
         """ Posts the attributes provided (use dict format) to the server at a specified scope """
-        from .TbModel import Id
+        try:
+            from .TbModel import Id
+        except ModuleNotFoundError:
+            from TbModel import Id
 
         if isinstance(attributes, Attributes):
             attributes = attributes.as_dict()
@@ -110,7 +152,10 @@ class HasAttributes():
         Returns a list of the device's attributes in the specified scope.
         Looks like [{'key': 'active', 'lastUpdateTs': 1595969455329, 'value': False}, ...]
         """
-        from .TbModel import Id
+        try:
+            from .TbModel import Id
+        except ModuleNotFoundError:
+            from TbModel import Id
 
         id: Id = cast(Id, self.id)        # type: ignore
 
@@ -126,7 +171,10 @@ class HasAttributes():
         returns True if operation generally, succeeded, even if attribute we're deleting didn't
         exist.
         """
-        from .TbModel import Id
+        try:
+            from .TbModel import Id
+        except ModuleNotFoundError:
+            from TbModel import Id
 
         id: Id = cast(Id, self.id)        # type: ignore
 

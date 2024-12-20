@@ -1,7 +1,11 @@
 from typing import Any
 from datetime import datetime
 from pydantic import field_serializer
-from .TbModel import TbModel
+
+try:
+    from .TbModel import TbModel
+except (ModuleNotFoundError, ImportError):
+    from TbModel import TbModel
 
 
 class TelemetryRecord(TbModel):

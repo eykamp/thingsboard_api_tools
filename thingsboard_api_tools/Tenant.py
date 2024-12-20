@@ -18,8 +18,13 @@
 
 from typing import  Optional, Dict, Any
 from pydantic import Field
-from .HasAttributes import HasAttributes
-from .TbModel import Id, TbObject
+
+try:
+    from .HasAttributes import HasAttributes
+    from .TbModel import Id, TbObject
+except (ModuleNotFoundError, ImportError):
+    from HasAttributes import HasAttributes
+    from TbModel import Id, TbObject
 
 
 class Tenant(TbObject, HasAttributes):

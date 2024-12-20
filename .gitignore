@@ -1,9 +1,12 @@
 *.pyc
 launch.json
 settings.json
-thingsboard_api_tools/config.py     # Secrets
 vnv.bat
 .venv/
 typings/
 build/
 dist/
+
+# Secrets
+config.py
+thingsboard_api_tools/config.py

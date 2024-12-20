@@ -17,8 +17,13 @@
 
 from typing import Any
 from pydantic import Field
-from .HasAttributes import HasAttributes
-from .TbModel import Id, TbObject
+
+try:
+    from .HasAttributes import HasAttributes
+    from .TbModel import Id, TbObject
+except (ModuleNotFoundError, ImportError):
+    from HasAttributes import HasAttributes
+    from TbModel import Id, TbObject
 
 
 # Intended as a read-only model -- there's no reason to create these
