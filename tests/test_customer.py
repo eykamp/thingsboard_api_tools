@@ -5,11 +5,11 @@ import requests
 from datetime import datetime, timezone
 
 
-from Customer import Customer
-from TbApi import TbApi
-from TbModel import Id
+from thingsboard_api_tools.Customer import Customer
+from thingsboard_api_tools.TbApi import TbApi
+from thingsboard_api_tools.TbModel import Id
 
-from .config import mothership_url, thingsboard_username, thingsboard_password
+from config import mothership_url, thingsboard_username, thingsboard_password
 
 assert mothership_url
 assert thingsboard_username

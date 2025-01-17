@@ -48,15 +48,11 @@ class TbModel(BaseModel):
 class Id(TbModel):
     """ Basic ID class. """
     id: str
-    # entity_type: str = Field(default_factory=self.xxx, alias="entityType")
     entity_type: str = Field(alias="entityType")
 
 
     def __eq__(self, other: Any) -> bool:
-        try:
-            from .Customer import CustomerId
-        except ModuleNotFoundError:
-            from Customer import CustomerId
+        from .Customer import CustomerId
 
         if isinstance(other, CustomerId):
             return self.id == other.id.id

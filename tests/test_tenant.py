@@ -1,8 +1,8 @@
 from requests import HTTPError
 # from faker import Faker     # type: ignore
 
-from TbApi import TbApi
-from .config import mothership_url, thingsboard_username, thingsboard_password
+from thingsboard_api_tools.TbApi import TbApi
+from config import mothership_url, thingsboard_username, thingsboard_password
 
 assert mothership_url
 assert thingsboard_username

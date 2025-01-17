@@ -1,11 +1,7 @@
 from typing import  Union, Iterable, Dict, Any, cast
 
-try:
-    from .TbModel import Attributes
-    from .TbApi import TbApi
-except (ModuleNotFoundError, ImportError):
-    from TbModel import Attributes
-    from TbApi import TbApi
+from .TbModel import Attributes
+from .TbApi import TbApi
 
 
 class HasAttributes():
@@ -18,10 +14,7 @@ class HasAttributes():
         """
         Posts the attributes provided (use dict format) to the server in the Server scope
         """
-        try:
-            from .TbModel import TbObject
-        except ModuleNotFoundError:
-            from TbModel import TbObject
+        from .TbModel import TbObject
 
         assert isinstance(self, TbObject)
 
@@ -31,10 +24,7 @@ class HasAttributes():
 
     def get_server_attributes(self) -> Attributes:
         """ Returns a list of the device's attributes in a the Server scope. """
-        try:
-            from .TbModel import TbObject
-        except ModuleNotFoundError:
-            from TbModel import TbObject
+        from .TbModel import TbObject
 
         assert isinstance(self, TbObject)
 

@@ -18,23 +18,19 @@
 from typing import  Dict, List, Any, Optional
 from pydantic import Field
 
-try:
-    from .TbModel import Id, TbObject, TbModel
-    from .Customer import Customer, CustomerId
-except (ModuleNotFoundError, ImportError):
-    from TbModel import Id, TbObject, TbModel
-    from Customer import Customer, CustomerId
+from .TbModel import Id, TbObject, TbModel
+from .Customer import Customer, CustomerId
 
 
 class Widget(TbModel):
     id: Id | str | None = None     # in a DashboardDef, widgets have GUIDs for ids; other times they have full-on Id objects
-    is_system_type: bool = Field(alias="isSystemType")
-    bundle_alias: str = Field(alias="bundleAlias")
-    type_alias: str = Field(alias="typeAlias")
+    is_system_type: bool | None = Field(default=None, alias="isSystemType")
+    bundle_alias: str | None = Field(default=None, alias="bundleAlias")
+    type_alias: str | None = Field(default=None, alias="typeAlias")
     type: str
-    name: str = Field(alias="title")
-    size_x: int = Field(alias="sizeX")
-    size_y: int = Field(alias="sizeY")
+    name: str | None = Field(default=None, alias="title")
+    size_x: float = Field(alias="sizeX")
+    size_y: float = Field(alias="sizeY")
     config: Dict[str, Any]
     # index: str        # TODO: Put in slots?
 
@@ -43,11 +39,16 @@ class Widget(TbModel):
 
 
 class SubWidget(TbModel):      # used within States <- Layouts <- Main <- Widgets
-    size_x: int = Field(alias="sizeX")
-    size_y: int = Field(alias="sizeY")
+    id: str | None = None
+    type: str | None = None
+    size_x: float = Field(alias="sizeX")
+    size_y: float = Field(alias="sizeY")
     mobile_height: Optional[int] = Field(default=None, alias="mobileHeight")    # Sometimes missing from the TB json; default to None
+    config: dict[str, Any] = {}
     row: int
     col: int
+    type_full_fqn: str | None = Field(default=None, alias="typeFullFqn")
+
     # index: str        # TODO: Put in slots?
 
     def __str__(self) -> str:
@@ -57,20 +58,22 @@ class SubWidget(TbModel):      # used within States <- Layouts <- Main <- Widget
 
 class GridSetting(TbModel):        # used within States <- Layouts <- Main <- GridSetting
     background_color: str = Field(alias="backgroundColor")  # "#3e4b6b",
-    color: str  # "rgba(1, 1, 1, 0.87)",
+    color: str | None = None  # "rgba(1, 1, 1, 0.87)",
     columns: int
-    margins: List[int]  # [10, 10],
+    margin: int | None = None
+    margins: List[int] | None = None  # [10, 10],
+    outer_margin: bool | None = Field(default=None, alias="outerMargin")
     background_size_mode: str = Field(alias="backgroundSizeMode")  # "100%",
-    auto_fill_height: bool = Field(alias="autoFillHeight")
-    mobile_auto_fill_height: bool = Field(alias="mobileAutoFillHeight")
-    mobile_row_height: int = Field(alias="mobileRowHeight")
+    auto_fill_height: bool | None = Field(default=None, alias="autoFillHeight")
+    mobile_auto_fill_height: bool | None = Field(default=None, alias="mobileAutoFillHeight")
+    mobile_row_height: int | None = Field(default=None, alias="mobileRowHeight")
 
     def __str__(self) -> str:
         return "GridSetting"
 
 
 class Layout(TbModel):      # used within States <- Layouts <- Main <- Widgets
-    widgets: Dict[str, SubWidget] | List[SubWidget]             # demo.thingsboard.io has list, Sensorbot has dict
+    widgets: dict[str, SubWidget] | list[SubWidget]             # demo.thingsboard.io has list, Sensorbot has dict
     grid_settings: GridSetting = Field(alias="gridSettings")
     # index: str          # new name of the layout
 
@@ -119,7 +122,7 @@ class Setting(TbModel):
     show_dashboard_timewindow: bool = Field(alias="showDashboardTimewindow")
     show_dashboard_export: bool = Field(alias="showDashboardExport")
     toolbar_always_open: bool = Field(alias="toolbarAlwaysOpen")
-    title_color: str = Field(alias="titleColor")
+    title_color: str | None = Field(default=None, alias="titleColor")
 
     def __str__(self) -> str:
         return f"Settings ({self.model_dump()})"
@@ -128,6 +131,9 @@ class Setting(TbModel):
 class RealTime(TbModel):
     interval: int
     time_window_ms: int = Field(alias="timewindowMs")
+    realtime_type: int | None = Field(default=None, alias="realtimeType")
+    quick_interval: str | None = Field(default=None, alias="quickInterval")        # e.g. "CURRENT_DAY"
+
 
     def __str__(self) -> str:
         return f"Real Time ({self.model_dump()})"
@@ -141,9 +147,30 @@ class Aggregation(TbModel):
         return f"Aggregation ({self.model_dump()})"
 
 
+class FixedTimeWindow(TbModel):
+    start_time_ms: int = Field(alias="startTimeMs")
+    end_time_ms: int = Field(alias="endTimeMs")
+
+    def __str__(self) -> str:
+        return f"Fixed Time Window ({self.model_dump()})"
+
+
+class History(TbModel):
+    history_type: int = Field(alias="historyType")
+    interval: int = Field(alias="interval")
+    time_window_ms: int = Field(alias="timewindowMs")
+    fixed_time_window: FixedTimeWindow = Field(alias="fixedTimewindow")
+
+    def __str__(self) -> str:
+        return f"History ({self.model_dump()})"
+
+
 class TimeWindow(TbModel):
+    display_value: str = Field(alias="displayValue")
+    selected_tab: int = Field(alias="selectedTab")
     real_time: RealTime = Field(alias="realtime")
     aggregation: Aggregation
+    history: History | None = None
 
     def __str__(self) -> str:
         return f"Time Window ({self.model_dump()})"
@@ -156,6 +183,7 @@ class Configuration(TbModel):
     device_aliases: Dict[str, EntityAlias] | None = Field(default=None, alias="deviceAliases")  # I've seen both of these
     entity_aliases: Dict[str, EntityAlias] | None = Field(default=None, alias="entityAliases")
     time_window: TimeWindow | None = Field(default=None, alias="timewindow")
+    filters: dict[str, Any] = Field(default={})
     settings: Setting | None = None
     # name: str
 
@@ -167,12 +195,13 @@ class DashboardHeader(TbObject):
     """
     A Dashboard with no configuration object -- what you get from TB if you request a group of dashboards.
     """
+    # id, created_time provided by TbObject
     tenant_id: Id = Field(alias="tenantId")
-    name: str = Field(alias="title")
-    assigned_customers: Optional[List[CustomerId]] = Field(alias="assignedCustomers")
-    image: Optional[str]
-    mobile_hide: Optional[bool] = Field(default=None, alias="mobileHide")
-    mobile_order: Optional[int] = Field(default=None, alias="mobileOrder")
+    name: str | None = Field(default=None, alias="title")
+    assigned_customers: list[CustomerId] | None = Field(alias="assignedCustomers")
+    image: str | None
+    mobile_hide: bool | None = Field(default=None, alias="mobileHide")
+    mobile_order: int | None = Field(default=None, alias="mobileOrder")
     external_id: Id | None = Field(default=None, alias="externalId")
 
 
@@ -191,10 +220,7 @@ class DashboardHeader(TbObject):
 
 
     def assign_to(self, customer: "Customer") -> None:
-        try:
-            from .Customer import CustomerId
-        except ModuleNotFoundError:
-            from Customer import CustomerId
+        from .Customer import CustomerId
 
         """
         Returns dashboard definition

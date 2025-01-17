@@ -111,15 +111,12 @@ class TbApi:
         return self.public_user_id
 
 
-    def create_dashboard(self, name: str, template: Optional["Dashboard"] = None, id: Optional["Id"] = None):
+    def create_dashboard(self, name: str, template: Optional["Dashboard"] = None, id: Optional["Id"] = None) -> "Dashboard":
         """
         Returns a Dashboard (including configuration)
         """
 
-        try:
-            from .Dashboard import Dashboard
-        except ModuleNotFoundError:
-            from Dashboard import Dashboard
+        from .Dashboard import Dashboard
 
 
         data: dict[str, Any] = {
@@ -141,24 +138,18 @@ class TbApi:
         """
         Return a list of all dashboards in the system
         """
-        try:
-            from .Dashboard import DashboardHeader
-        except ModuleNotFoundError:
-            from Dashboard import DashboardHeader
+        from .Dashboard import DashboardHeader
 
 
         all_results = self.get_paged("/api/tenant/dashboards", "Error fetching list of all dashboards")
         return self.tb_objects_from_list(all_results, DashboardHeader)
 
 
-    def get_dashboard_headers_by_name(self, dash_name_prefix: str):
+    def get_dashboard_headers_by_name(self, dash_name_prefix: str) -> list["DashboardHeader"]:
         """
         Returns a list of all dashes starting with the specified name
         """
-        try:
-            from .Dashboard import DashboardHeader
-        except ModuleNotFoundError:
-            from Dashboard import DashboardHeader
+        from .Dashboard import DashboardHeader
 
         url = f"/api/tenant/dashboards?textSearch={dash_name_prefix}"
         objs = self.get_paged(url, f"Error retrieving dashboards starting with '{dash_name_prefix}'")
@@ -171,7 +162,7 @@ class TbApi:
         return dashes
 
 
-    def get_dashboard_by_name(self, dash_name: str) -> Optional["Dashboard"]:
+    def get_dashboard_by_name(self, dash_name: str):
         """ Returns dashboard with specified name, or None if we can't find one """
         headers = self.get_dashboard_headers_by_name(dash_name)
         for header in headers:
@@ -189,12 +180,8 @@ class TbApi:
         """
         Retrieve dashboard by id
         """
-        try:
-            from .Dashboard import DashboardHeader
-            from .TbModel import Id
-        except ModuleNotFoundError:
-            from Dashboard import DashboardHeader
-            from TbModel import Id
+        from .Dashboard import DashboardHeader
+        from .TbModel import Id
 
         if isinstance(dash_id, Id):
             dash_id = dash_id.id
@@ -220,10 +207,7 @@ class TbApi:
         server_attributes: dict[str, Any] = {},
     ):
         """ Factory method. """
-        try:
-            from .Customer import Customer
-        except ModuleNotFoundError:
-            from Customer import Customer
+        from .Customer import Customer
 
         data: dict[str, Any] = {
             "title": name,
@@ -253,12 +237,8 @@ class TbApi:
         Returns an instantiated Customer object cust_id can be either an Id object or a guid.  If the passed id is the NULL_GUID,
         return None.
         """
-        try:
-            from .Customer import Customer, CustomerId
-            from .TbModel import Id
-        except ModuleNotFoundError:
-            from Customer import Customer, CustomerId
-            from TbModel import Id
+        from .Customer import Customer, CustomerId
+        from .TbModel import Id
 
         if isinstance(cust_id, CustomerId):
             cust_id = cust_id.id.id
@@ -273,14 +253,11 @@ class TbApi:
         return Customer(tbapi=self, **obj)
 
 
-    def get_customers_by_name(self, cust_name_prefix: str):
+    def get_customers_by_name(self, cust_name_prefix: str)-> list["Customer"]:
         """
         Returns a list of all customers starting with the specified name
         """
-        try:
-            from .Customer import Customer
-        except ModuleNotFoundError:
-            from Customer import Customer
+        from .Customer import Customer
 
         cust_datas = self.get_paged(f"/api/customers?textSearch={cust_name_prefix}", f"Error retrieving customers with names starting with '{cust_name_prefix}'")
 
@@ -306,10 +283,7 @@ class TbApi:
         """
         Return a list of all customers in the system
         """
-        try:
-            from .Customer import Customer
-        except ModuleNotFoundError:
-            from Customer import Customer
+        from .Customer import Customer
 
         all_results = self.get_paged("/api/customers", "Error fetching list of all customers")
         return self.tb_objects_from_list(all_results, Customer)
@@ -319,10 +293,7 @@ class TbApi:
         """
         Return a list of all tenants in the system
         """
-        try:
-            from .Tenant import Tenant
-        except ModuleNotFoundError:
-            from Tenant import Tenant
+        from .Tenant import Tenant
 
         all_results = self.get_paged("/api/tenants", "Error fetching list of all tenants")
         return self.tb_objects_from_list(all_results, Tenant)
@@ -343,10 +314,7 @@ class TbApi:
     ):
         """ Factory method. """
 
-        try:
-            from .Device import Device
-        except ModuleNotFoundError:
-            from Device import Device
+        from .Device import Device
 
         data: dict[str, Any] = {
             "name": name,
@@ -377,12 +345,8 @@ class TbApi:
         """
         Returns an instantiated Device object device_id can be either an Id object or a guid
         """
-        try:
-            from .TbModel import Id
-            from .Device import Device
-        except ModuleNotFoundError:
-            from TbModel import Id
-            from Device import Device
+        from .TbModel import Id
+        from .Device import Device
 
         if isinstance(device_id, Id):
             device_id = device_id.id
@@ -399,14 +363,11 @@ class TbApi:
         return Device(self, **obj)
 
 
-    def get_devices_by_name(self, device_name_prefix: str):
+    def get_devices_by_name(self, device_name_prefix: str) -> list["Device"]:
         """
         Returns a list of all devices starting with the specified name
         """
-        try:
-            from .Device import Device
-        except ModuleNotFoundError:
-            from Device import Device
+        from .Device import Device
 
         data = self.get_paged(f"/api/tenant/devices?textSearch={device_name_prefix}", f"Error fetching devices with name matching '{device_name_prefix}'")
         return self.tb_objects_from_list(data, Device)
@@ -421,30 +382,21 @@ class TbApi:
 
 
     def get_devices_by_type(self, device_type: str):
-        try:
-            from .Device import Device
-        except ModuleNotFoundError:
-            from Device import Device
+        from .Device import Device
 
         data = self.get(f"/api/tenant/devices?pageSize=99999&page=0&type={device_type}", f"Error fetching devices with type '{device_type}'")["data"]
         return self.tb_objects_from_list(data, Device)
 
 
     def get_all_devices(self):
-        try:
-            from .Device import Device
-        except ModuleNotFoundError:
-            from Device import Device
+        from .Device import Device
 
         all_results = self.get_paged("/api/tenant/devices", "Error fetching list of all Devices")
         return self.tb_objects_from_list(all_results, Device)
 
 
     def get_all_device_profiles(self):
-        try:
-            from .Device import DeviceProfile
-        except ModuleNotFoundError:
-            from Device import DeviceProfile
+        from .Device import DeviceProfile
 
         all_results = self.get_paged("/api/deviceProfiles", "Error fetching list of all DeviceProfiles")
         return self.tb_objects_from_list(all_results, DeviceProfile)
@@ -455,12 +407,8 @@ class TbApi:
         Returns an instantiated DeviceProfile object
         device_profile_id can be either an Id object or a guid
         """
-        try:
-            from .DeviceProfile import DeviceProfile
-            from .TbModel import Id
-        except ModuleNotFoundError:
-            from DeviceProfile import DeviceProfile
-            from TbModel import Id
+        from .DeviceProfile import DeviceProfile
+        from .TbModel import Id
 
         if isinstance(device_profile_id, Id):
             device_profile_id = device_profile_id.id
@@ -473,10 +421,7 @@ class TbApi:
 
     def get_device_profiles_by_name(self, device_profile_name_prefix: str):
         """ Returns a list of all DeviceProfiles starting with the specified name """
-        try:
-            from .DeviceProfile import DeviceProfile
-        except ModuleNotFoundError:
-            from DeviceProfile import DeviceProfile
+        from .DeviceProfile import DeviceProfile
 
         data = self.get_paged(f"/api/deviceProfiles?textSearch={device_profile_name_prefix}", f"Error fetching DeviceProfiles with name matching '{device_profile_name_prefix}'")
         return self.tb_objects_from_list(data, DeviceProfile)
@@ -489,10 +434,7 @@ class TbApi:
 
 
     def get_all_device_profile_infos(self):
-        try:
-            from .DeviceProfile import DeviceProfileInfo
-        except ModuleNotFoundError:
-            from DeviceProfile import DeviceProfileInfo
+        from .DeviceProfile import DeviceProfileInfo
 
         all_results = self.get_paged("/api/deviceProfileInfos", "Error fetching list of all DeviceProfileInfos")
         return self.tb_objects_from_list(all_results, DeviceProfileInfo)
@@ -503,12 +445,8 @@ class TbApi:
         Returns an instantiated DeviceProfileInfo object
         device_profile_info_id can be either an Id object or a guid
         """
-        try:
-            from .DeviceProfile import DeviceProfileInfo
-            from .TbModel import Id
-        except ModuleNotFoundError:
-            from DeviceProfile import DeviceProfileInfo
-            from TbModel import Id
+        from .DeviceProfile import DeviceProfileInfo
+        from .TbModel import Id
 
         if isinstance(device_profile_info_id, Id):
             device_profile_info_id = device_profile_info_id.id
@@ -523,10 +461,7 @@ class TbApi:
         """
         Returns a list of all DeviceProfileInfos starting with the specified name
         """
-        try:
-            from .DeviceProfile import DeviceProfileInfo
-        except ModuleNotFoundError:
-            from DeviceProfile import DeviceProfileInfo
+        from .DeviceProfile import DeviceProfileInfo
 
         data = self.get_paged(f"/api/deviceProfileInfos?textSearch={device_profile_info_name_prefix}", f"Error fetching DeviceProfileInfos with name matching '{device_profile_info_name_prefix}'")
         return self.tb_objects_from_list(data, DeviceProfileInfo)
@@ -561,10 +496,7 @@ class TbApi:
 
     def get_current_user(self):
         """ Gets info about the user whose credentials are running this API. """
-        try:
-            from .User import User
-        except ModuleNotFoundError:
-            from User import User
+        from .User import User
 
         obj: dict[str, Any] = self.get_paged("/api/users", "Error fetching info about current user")[0]
         return User(tbapi=self, **obj)

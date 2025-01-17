@@ -18,12 +18,8 @@
 from typing import  Optional, Dict, List, Any, TYPE_CHECKING
 from pydantic import Field       # pip install pydantic
 
-try:
-    from .HasAttributes import HasAttributes
-    from .TbModel import TbModel, Id, TbObject
-except (ModuleNotFoundError, ImportError):
-    from HasAttributes import HasAttributes
-    from TbModel import TbModel, Id, TbObject
+from .HasAttributes import HasAttributes
+from .TbModel import TbModel, Id, TbObject
 
 
 if TYPE_CHECKING:
@@ -94,10 +90,7 @@ class Customer(TbObject, HasAttributes):
         """
         Returns a list of all devices associated with a customer; will not include public devices!
         """
-        try:
-            from .Device import Device
-        except ModuleNotFoundError:
-            from Device import Device
+        from .Device import Device
 
         cust_id = self.id.id
 
