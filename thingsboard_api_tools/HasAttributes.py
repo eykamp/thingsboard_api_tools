@@ -1,4 +1,4 @@
-from typing import  Union, Iterable, Dict, Any, cast
+from typing import  Union, Iterable, Dict, Any
 
 from .TbModel import Attributes, Id
 from .TbApi import TbApi
