@@ -1,5 +1,5 @@
 from thingsboard_api_tools.TbApi import TbApi
-from config import mothership_url, thingsboard_username, thingsboard_password
+from .config import mothership_url, thingsboard_username, thingsboard_password
 
 assert mothership_url
 assert thingsboard_username

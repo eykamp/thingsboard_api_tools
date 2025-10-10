@@ -1,4 +1,4 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.4
 Name: thingsboard_api_tools
 Version: 0.2
 Summary: Tools for interacting with the Thingsboard API
@@ -12,3 +12,12 @@ Classifier: Operating System :: OS Independent
 Requires-Python: >=3.10
 License-File: LICENSE
 Requires-Dist: requests
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: home-page
+Dynamic: license
+Dynamic: license-file
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

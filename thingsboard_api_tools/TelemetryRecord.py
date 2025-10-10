@@ -2,10 +2,7 @@ from typing import Any
 from datetime import datetime
 from pydantic import field_serializer
 
-try:
-    from .TbModel import TbModel
-except (ModuleNotFoundError, ImportError):
-    from TbModel import TbModel
+from .TbModel import TbModel
 
 
 class TelemetryRecord(TbModel):
@@ -14,8 +11,8 @@ class TelemetryRecord(TbModel):
     ts: datetime | None
 
     @field_serializer("ts")
-    def format_ts(ts):
-        return int(ts.timestamp() * 1000)       # type: ignore
+    def format_ts(self, ts: datetime):
+        return int(ts.timestamp() * 1000)
 
 
     def __str__(self):

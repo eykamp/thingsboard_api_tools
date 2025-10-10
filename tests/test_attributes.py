@@ -1,12 +1,12 @@
 from typing import Any
-from faker import Faker     # type: ignore
+from faker import Faker
 from requests import HTTPError
 from datetime import datetime, timezone
 
 
 from thingsboard_api_tools.TbApi import TbApi
 
-from config import mothership_url, thingsboard_username, thingsboard_password
+from .config import mothership_url, thingsboard_username, thingsboard_password
 
 assert mothership_url
 assert thingsboard_username
@@ -14,7 +14,7 @@ assert thingsboard_password
 
 tbapi = TbApi(url=mothership_url, username=thingsboard_username, password=thingsboard_password)
 
-fake = Faker()      # type: ignore
+fake = Faker()
 
 
 def test_server_attributes():

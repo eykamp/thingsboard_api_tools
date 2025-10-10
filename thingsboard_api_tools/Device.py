@@ -20,19 +20,14 @@ from datetime import datetime
 from enum import Enum
 from pydantic import Field
 
-try:
-    from .TbModel import TbObject, Id
-    from .HasAttributes import HasAttributes
-    from .DeviceProfile import DeviceProfile, DeviceProfileInfo
-except (ModuleNotFoundError, ImportError):
-    from TbModel import TbObject, Id
-    from HasAttributes import HasAttributes
-    from DeviceProfile import DeviceProfile, DeviceProfileInfo
+from .TbModel import TbObject, Id
+from .HasAttributes import HasAttributes
+from .DeviceProfile import DeviceProfile, DeviceProfileInfo
 
 
 if TYPE_CHECKING:
-    from TbModel import TbApi
-    from Customer import Customer
+    from .TbModel import TbApi
+    from .Customer import Customer
 
 
 Timestamp = Union[datetime, float]
@@ -80,7 +75,7 @@ class Device(TbObject, HasAttributes):
     def assign_to(self, customer: "Customer") -> None:
         if self.customer_id != customer.id:
             obj = self.tbapi.post(f"/api/customer/{customer.id.id}/device/{self.id.id}", None, f"Error assigning device '{self.id.id}' to customer {customer}")
-            self.customer_id = Id(**obj["customerId"])
+            self.customer_id = Id.model_validate(obj["customerId"])
 
 
     def get_customer(self) -> Optional["Customer"]:
@@ -92,7 +87,7 @@ class Device(TbObject, HasAttributes):
         """ Assigns device to the public customer, which is how TB makes devices public. """
         if not self.is_public():
             obj = self.tbapi.post(f"/api/customer/public/device/{self.id.id}", None, f"Error assigning device '{self.id.id}' to public customer")
-            self.customer_id = Id(**obj["customerId"])
+            self.customer_id = Id.model_validate(obj["customerId"])
 
 
     def is_public(self) -> bool:

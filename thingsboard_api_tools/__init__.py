@@ -27,6 +27,7 @@ from .DeviceProfile import DeviceProfile, DeviceProfileInfo
 from .TelemetryRecord import TelemetryRecord
 from .EntityType import EntityType
 
+
 __all__ = [
     "AggregationType",
     "Attributes",

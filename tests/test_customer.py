@@ -1,15 +1,15 @@
 from typing import Any
-from faker import Faker     # type: ignore
+from faker import Faker
 import uuid
 import requests
 from datetime import datetime, timezone
 
 
-from thingsboard_api_tools.Customer import Customer
+from thingsboard_api_tools.Customer import Customer, CustomerId
 from thingsboard_api_tools.TbApi import TbApi
 from thingsboard_api_tools.TbModel import Id
 
-from config import mothership_url, thingsboard_username, thingsboard_password
+from .config import mothership_url, thingsboard_username, thingsboard_password
 
 assert mothership_url
 assert thingsboard_username
@@ -17,11 +17,20 @@ assert thingsboard_password
 
 tbapi = TbApi(url=mothership_url, username=thingsboard_username, password=thingsboard_password)
 
-fake = Faker()      # type: ignore
+fake = Faker()
 
 
 def test_get_all_customers():
     tbapi.get_all_customers()
+
+
+def test_customer_id():
+    """ There's something goofy in the code here; make sure that customer_id passes smoke test. """
+    cust = tbapi.get_all_customers()[0]
+    cust_id = cust.customer_id
+    assert isinstance(cust_id, CustomerId)
+    assert cust_id.id == cust.id
+    assert cust_id.id.entity_type == "CUSTOMER"
 
 
 def test_create_edit_and_delete_customer():
@@ -45,7 +54,7 @@ def test_create_edit_and_delete_customer():
     }
 
     # Create a customer using this factory method
-    cust = tbapi.create_customer(**data, server_attributes={"test_attr": attr_val})
+    cust = tbapi.create_customer(**data, server_attributes={"test_attr": attr_val})     # type: ignore
 
     assert cust.id.entity_type == "CUSTOMER"
 
@@ -93,7 +102,7 @@ def test_update_bogus_customer():
 
     try:
         cust.update()
-    except requests.exceptions.HTTPError:
+    except requests.HTTPError:
         pass
     else:
         assert False

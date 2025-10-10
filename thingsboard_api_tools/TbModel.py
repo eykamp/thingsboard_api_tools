@@ -15,16 +15,12 @@
 # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-from typing import  Dict, List, Any
+from typing import  Dict, Any, cast
 from datetime import datetime
 from enum import Enum
 from pydantic import BaseModel, Field
 import pytz
-
-try:
-    from .TbApi import TbApi
-except (ModuleNotFoundError, ImportError):
-    from TbApi import TbApi
+from .TbApi import TbApi
 
 
 TIMEZONE = pytz.timezone("US/Pacific")
@@ -36,7 +32,7 @@ class TbModel(BaseModel):
     most of our dirty work such as encoding, decoding, and validating json streams.
     """
     class Config:
-        arbitrary_types_allowed=True        # TODO: Can we get rid of this somehow?
+        arbitrary_types_allowed = True        # TODO: Can we get rid of this somehow?
         # json_encoders: Dict[Any, Callable[[Any], Any]] = {      # TODO: json_encoders is deprecated
         #     datetime: lambda v: int(v.timestamp() * 1000),     # TB expresses datetimes as epochs in milliseonds
         # }
@@ -52,9 +48,12 @@ class Id(TbModel):
 
 
     def __eq__(self, other: Any) -> bool:
-        from .Customer import CustomerId
+        # from .Customer import CustomerId
 
-        if isinstance(other, CustomerId):
+        # if isinstance(other, CustomerId):
+
+        # Check if it's a CustomerId (duck typing to avoid circular import)
+        if hasattr(other, 'id') and hasattr(other, 'public'):
             return self.id == other.id.id
 
         if isinstance(other, str):
@@ -75,11 +74,11 @@ class TbObject(TbModel):
     id: Id
     created_time: datetime | None = Field(default=None, alias="createdTime", exclude=True)       # Read-only attribute
 
-    tbapi: TbApi = Field(exclude=True)
+    tbapi: "TbApi" = Field(exclude=True)        # exclude=True --> don't serialize this field
 
 
     def __str__(self) -> str:
-        name = ""
+        name: str = ""
         if hasattr(self, "name"):
             name = self.name   # type: ignore
 
@@ -106,11 +105,11 @@ class Attributes(Dict[str, Attribute]):
 
 
     """ Represents a set of attributes about an object. """
-    def __init__(self, attribute_data: List[Dict[str, Any]], scope: Scope):
+    def __init__(self, attribute_data: list[dict[str, Any]], scope: Scope):
         super().__init__()
 
         for data in attribute_data:
-            self[data["key"]] = Attribute(**data)
+            self[data["key"]] = Attribute.model_validate(data)
 
         self.scope = scope
 

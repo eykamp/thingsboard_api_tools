@@ -1,12 +1,13 @@
-from faker import Faker     # type: ignore
+from faker import Faker
 from datetime import datetime
 import time
 import json as Json
 
-from thingsboard_api_tools.Device import prepare_ts
 from thingsboard_api_tools.TbApi import TbApi
+from thingsboard_api_tools.Device import prepare_ts
+from thingsboard_api_tools.TelemetryRecord import TelemetryRecord
 
-from config import mothership_url, thingsboard_username, thingsboard_password
+from .config import mothership_url, thingsboard_username, thingsboard_password
 
 assert mothership_url
 assert thingsboard_username
@@ -14,7 +15,7 @@ assert thingsboard_password
 
 tbapi = TbApi(url=mothership_url, username=thingsboard_username, password=thingsboard_password)
 
-fake = Faker()      # type: ignore
+fake = Faker()
 
 
 def test_new_device_has_no_telemetry():
@@ -69,7 +70,7 @@ def test_telemetry():
         while tries > 0:
             try:
                 latest = dev.get_latest_telemetry(keys)
-                assert latest == {keys[i]: [{"ts": ts1, "value": data[1][i]}] for i in range(len(keys))}, f'{ {keys[i]: [{"ts": ts1, "value": data[1][i]}] for i in range(len(keys))} } should equal {latest} >> Try #{tries}'
+                assert latest == {keys[i]: [{"ts": ts1, "value": data[1][i]}] for i in range(len(keys))}, f'{{keys[i]: [{"ts": ts1, "value": data[1][i]}] for i in range(len(keys))}} should equal {latest} >> Try #{tries}'
                 assert set(dev.get_telemetry_keys()) == set(keys), f"Try #{tries}"   # Use set to make order not matter... because it doesn't
 
             except AssertionError:
@@ -85,16 +86,15 @@ def test_telemetry():
         tel = dev.get_telemetry(keys, end_ts=ts1 + 1000)
         for i, k in enumerate(keys):
             # Again, use sets to ensure we don't get tripped up by the order in which the data comes back
-            assert(
-                set([Json.dumps(tel[k][x]) for x in (0, 1)]) ==
-                set([Json.dumps({"ts": [ts0, ts1][x], "value": data[x][i]}) for x in (0, 1)])
-            )
+            set1 = set([Json.dumps(tel[k][x]) for x in (0, 1)])
+            set2 = set([Json.dumps({"ts": [ts0, ts1][x], "value": data[x][i]}) for x in (0, 1)])
+            assert set1 == set2
 
         # Specify a time range that will only bring back first item we sent
         tel = dev.get_telemetry(keys, start_ts=1000000, end_ts=ts0 + 500)
         for i, k in enumerate(keys):
             assert len(tel[k]) == 1
-            assert(tel[k][0] == {"ts": ts0, "value": data[0][i]})
+            assert tel[k][0] == {"ts": ts0, "value": data[0][i]}
 
     finally:
         dev.delete()
@@ -108,6 +108,18 @@ def test_prepare_timestamp():
     assert e == prepare_ts(e)   # ...but lets ints through unmolested
 
 
+def test_telemetry_record_serializer():
+    """ There was something weird about this serializer... test fixed up version. """
+    import re
+
+    ts = datetime.now()
+    telrec = TelemetryRecord(values={"a": 1, "b": "two"}, ts=ts)
+
+    assert telrec.ts == ts
+
+    # Test that str(telrec) contains "ts: <epoch_in_ms>" format
+    telrec_str = str(telrec)
+    assert re.search(r"ts: \d{13}", telrec_str), f"Expected 'ts: <epoch_ms>' pattern in: {telrec_str}"
 
 
 def fake_device_name():

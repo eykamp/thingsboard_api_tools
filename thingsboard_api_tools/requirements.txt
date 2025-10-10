@@ -3,3 +3,4 @@ pydantic
 requests
 pytest
 pytz
+setuptools

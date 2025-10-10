@@ -166,8 +166,8 @@ class History(TbModel):
 
 
 class TimeWindow(TbModel):
-    display_value: str = Field(alias="displayValue")
-    selected_tab: int = Field(alias="selectedTab")
+    display_value: str | None = Field(alias="displayValue", default=None)
+    selected_tab: int | None = Field(alias="selectedTab", default=None)
     real_time: RealTime = Field(alias="realtime")
     aggregation: Aggregation
     history: History | None = None
@@ -204,6 +204,11 @@ class DashboardHeader(TbObject):
     mobile_order: int | None = Field(default=None, alias="mobileOrder")
     external_id: Id | None = Field(default=None, alias="externalId")
 
+    # Other observed fields
+    # resources
+    # version: int
+    # externalId: Id | None = Field(default=None, alias="externalId")
+
 
     def is_public(self) -> bool:
         """
@@ -222,9 +227,6 @@ class DashboardHeader(TbObject):
     def assign_to(self, customer: "Customer") -> None:
         from .Customer import CustomerId
 
-        """
-        Returns dashboard definition
-        """
         dashboard_id = self.id.id
         customer_id = customer.id.id
         resp = self.tbapi.post(f"/api/customer/{customer_id}/dashboard/{dashboard_id}", None, f"Could not assign dashboard '{dashboard_id}' to customer '{customer_id}'")
@@ -233,8 +235,6 @@ class DashboardHeader(TbObject):
         self.assigned_customers = []
         for cust_data in resp["assignedCustomers"]:
             self.assigned_customers.append(CustomerId(**cust_data))
-
-        return resp
 
 
     def get_customers(self) -> List["Customer"]:
@@ -279,7 +279,7 @@ class DashboardHeader(TbObject):
         self.assigned_customers.remove(public_id)
 
 
-    def get_public_url(self) -> Optional[str]:
+    def get_public_url(self) -> str | None:
         if not self.is_public():
             return None
 
@@ -296,7 +296,7 @@ class DashboardHeader(TbObject):
     def get_dashboard(self):
         dash_id = self.id.id
         obj = self.tbapi.get(f"/api/dashboard/{dash_id}", f"Error retrieving dashboard definition for '{dash_id}'")
-        return Dashboard(tbapi=self.tbapi, **obj)
+        return Dashboard.model_validate(obj | {"tbapi": self.tbapi})
 
 
     def update(self):
@@ -317,3 +317,8 @@ class DashboardHeader(TbObject):
 class Dashboard(DashboardHeader):
     """ Extends Dashboard by adding a configuration. """
     configuration: Configuration | None     # Empty dashboards will have no configuration
+
+
+# # Rebuild models to resolve forward references
+# DashboardHeader.model_rebuild()
+# Dashboard.model_rebuild()

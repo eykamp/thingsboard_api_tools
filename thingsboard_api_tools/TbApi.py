@@ -23,11 +23,11 @@ import time
 from http import HTTPStatus
 
 if TYPE_CHECKING:
-    from Customer import Customer, CustomerId
-    from Dashboard import Dashboard
-    from Device import Device
-    from DeviceProfile import DeviceProfile, DeviceProfileInfo
-    from TbModel import Id, TbObject
+    from .Customer import Customer, CustomerId
+    from .Dashboard import Dashboard
+    from .Device import Device
+    from .DeviceProfile import DeviceProfile, DeviceProfileInfo
+    from .TbModel import Id, TbObject
 
 MINUTES = 60
 
@@ -95,7 +95,7 @@ class TbApi:
         return self.get_paged("/api/tenant/devices", "Error retrieving devices for tenant")
 
 
-    def get_public_user_id(self):
+    def get_public_user_id(self) -> "CustomerId | None":
         """
         Returns Id of public customer, or None if there is none.  Caches value for future use.
         """
@@ -131,7 +131,7 @@ class TbApi:
 
         # Update the configuration
         obj = self.post("/api/dashboard", data, "Error creating new dashboard")
-        return Dashboard(tbapi=self, **obj)
+        return Dashboard.model_validate(obj | {"tbapi": self})
 
 
     def get_all_dashboard_headers(self):
@@ -140,12 +140,11 @@ class TbApi:
         """
         from .Dashboard import DashboardHeader
 
-
         all_results = self.get_paged("/api/tenant/dashboards", "Error fetching list of all dashboards")
         return self.tb_objects_from_list(all_results, DashboardHeader)
 
 
-    def get_dashboard_headers_by_name(self, dash_name_prefix: str) -> list["DashboardHeader"]:
+    def get_dashboard_headers_by_name(self, dash_name_prefix: str):
         """
         Returns a list of all dashes starting with the specified name
         """
@@ -157,7 +156,7 @@ class TbApi:
         dashes: list[DashboardHeader] = []
 
         for obj in objs:
-            dashes.append(DashboardHeader(tbapi=self, **obj))
+            dashes.append(DashboardHeader.model_validate(obj | {"tbapi": self}))
 
         return dashes
 
@@ -188,7 +187,7 @@ class TbApi:
         # otherwise, assume dash_id is a guid
 
         obj = self.get(f"/api/dashboard/info/{dash_id}", f"Error retrieving dashboard for '{dash_id}'")
-        return DashboardHeader(tbapi=self, **obj)
+        return DashboardHeader.model_validate(obj | {"tbapi": self})
 
 
     def create_customer(
@@ -224,7 +223,7 @@ class TbApi:
         }
 
         obj = self.post("/api/customer", Json.dumps(data), "Error creating customer")
-        customer = Customer(tbapi=self, **obj)
+        customer = Customer.model_validate(obj | {"tbapi": self})
 
         if server_attributes:
             customer.set_server_attributes(server_attributes)
@@ -250,10 +249,10 @@ class TbApi:
             return None
 
         obj = self.get(f"/api/customer/{cust_id}", f"Could not retrieve Customer with id '{cust_id}'")
-        return Customer(tbapi=self, **obj)
+        return Customer.model_validate(obj | {"tbapi": self})
 
 
-    def get_customers_by_name(self, cust_name_prefix: str)-> list["Customer"]:
+    def get_customers_by_name(self, cust_name_prefix: str):
         """
         Returns a list of all customers starting with the specified name
         """
@@ -267,7 +266,7 @@ class TbApi:
             if cust_data["additionalInfo"] is not None and not isinstance(cust_data["additionalInfo"], dict):
                 cust_data["additionalInfo"] = Json.loads(cust_data["additionalInfo"])
 
-            customers.append(Customer(tbapi=self, **cust_data))
+            customers.append(Customer.model_validate(cust_data | {"tbapi": self}))
         return customers
 
 
@@ -363,7 +362,7 @@ class TbApi:
         return Device(self, **obj)
 
 
-    def get_devices_by_name(self, device_name_prefix: str) -> list["Device"]:
+    def get_devices_by_name(self, device_name_prefix: str):
         """
         Returns a list of all devices starting with the specified name
         """
@@ -473,21 +472,21 @@ class TbApi:
         return _exact_match(device_profile_info_name, device_profile_infos)
 
 
-    # TODO: create Asset object
-    def add_asset(self, asset_name:str, asset_type:str, shared_attributes: dict[str, Any] | None, server_attributes: dict[str, Any] | None):
-        data = {
-            "name": asset_name,
-            "type": asset_type
-        }
-        asset = self.post("/api/asset", data, "Error adding asset")
+    # # TODO: create Asset object
+    # def add_asset(self, asset_name: str, asset_type: str, shared_attributes: dict[str, Any] | None, server_attributes: dict[str, Any] | None):
+    #     data = {
+    #         "name": asset_name,
+    #         "type": asset_type
+    #     }
+    #     asset = self.post("/api/asset", data, "Error adding asset")
 
-        if server_attributes is not None:
-            asset.set_server_attributes(server_attributes)
+    #     if server_attributes is not None:
+    #         asset.set_server_attributes(server_attributes)
 
-        if shared_attributes is not None:
-            asset.set_shared_attributes(shared_attributes)
+    #     if shared_attributes is not None:
+    #         asset.set_shared_attributes(shared_attributes)
 
-        return asset
+    #     return asset
 
 
     def get_asset_types(self):
@@ -499,7 +498,7 @@ class TbApi:
         from .User import User
 
         obj: dict[str, Any] = self.get_paged("/api/users", "Error fetching info about current user")[0]
-        return User(tbapi=self, **obj)
+        return User.model_validate(obj | {"tbapi": self})
 
 
     def get_current_tenant_id(self):
@@ -510,7 +509,7 @@ class TbApi:
         """ Given a list of json strings and a type, return a list of rehydrated objects of that type. """
         objects: list[T] = []
         for jsn in json_list:
-            objects.append(object_type(tbapi=self, **jsn))
+            objects.append(object_type.model_validate(jsn | {"tbapi": self}))
         return objects
 
 
@@ -519,8 +518,16 @@ class TbApi:
     def pretty_print_request(request: Union[requests.PreparedRequest, requests.Request]):
         request = request.prepare() if isinstance(request, requests.Request) else request
 
-        headers = "\n".join(f"{k}: {v}" for k, v in request.headers.items())
-        body = "" if request.body is None else request.body.decode() if isinstance(request.body, bytes) else request.body
+        if request.headers:
+            headers = "\n".join(f"{k}: {v}" for k, v in request.headers.items())
+        else:
+            headers = "<NO HEADERS>"
+
+        if request.body:
+            body = request.body.decode() if isinstance(request.body, bytes) else request.body
+        else:
+            body = "<NO BODY>"
+
         print(f"{request.method} {request.path_url}\nHeaders:\n{headers}\nBody:\n{body}")
 
 
@@ -592,7 +599,7 @@ class TbApi:
         return True
 
 
-    def post(self, params: str, data: Optional[Union[str, dict[str, Any]]], msg: str) -> Any:
+    def post(self, params: str, data: Optional[Union[str, dict[str, Any]]], msg: str) -> dict[str, Any]:
         """ Data can be a string or a dict """
         url = self.mothership_url + params
         headers = {"Accept": "application/json", "Content-Type": "application/json"}
@@ -618,7 +625,7 @@ class TbApi:
     def validate_response(resp: requests.Response, msg: str) -> None:
         try:
             resp.raise_for_status()
-        except requests.exceptions.RequestException as ex:
+        except requests.RequestException as ex:
             ex.args += (msg, f"RESPONSE BODY: {resp.content.decode('utf8')}")       # Append response to the exception to make it easier to diagnose
             raise
 

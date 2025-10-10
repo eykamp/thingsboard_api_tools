@@ -15,7 +15,7 @@
 # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-from typing import  Optional, Dict, List, Any, TYPE_CHECKING
+from typing import  Any, TYPE_CHECKING
 from pydantic import Field       # pip install pydantic
 
 from .HasAttributes import HasAttributes
@@ -23,16 +23,14 @@ from .TbModel import TbModel, Id, TbObject
 
 
 if TYPE_CHECKING:
-    from Device import Device
+    from .Device import Device
 
 
 class CustomerId(TbModel):
     """ This is an Id with couple of extra fields. """
 
-    # from TbModel import TbModel, Id, TbObject
-
     id: Id = Field(alias="customerId")
-    public: bool
+    public: bool = False
     name: str = Field(alias="title")
 
 
@@ -47,15 +45,15 @@ class CustomerId(TbModel):
 class Customer(TbObject, HasAttributes):
     name: str = Field(alias="title")      # "title" is the oficial TB name field; "name" is read-only, maps to this
     tenant_id: Id = Field(alias="tenantId")
-    address: Optional[str]
-    address2: Optional[str]
-    city: Optional[str]
-    state: Optional[str]
-    zip: Optional[str]
-    country: Optional[str]
-    email: Optional[str]
-    phone: Optional[str]
-    additional_info: Optional[Dict[str, Any]] = Field(default={}, alias="additionalInfo")
+    address: str | None
+    address2: str | None
+    city: str | None
+    state: str | None
+    zip: str | None
+    country: str | None
+    email: str | None
+    phone: str | None
+    additional_info: dict[str, Any] | None = Field(default={}, alias="additionalInfo")
 
 
     def update(self):
@@ -65,7 +63,7 @@ class Customer(TbObject, HasAttributes):
     def is_public(self) -> bool:
         if not self.additional_info:
             return False
-        # else
+
         return self.additional_info.get("isPublic", False)
 
 
@@ -83,10 +81,10 @@ class Customer(TbObject, HasAttributes):
 
     @property
     def customer_id(self) -> CustomerId:
-        return CustomerId(customerId=self.id, public=self.is_public(), title=self.name if self.name else "")
+        return CustomerId(customerId=self.id, public=self.is_public(), title=self.name if self.name else "")    # type: ignore
 
 
-    def get_devices(self) -> List["Device"]:
+    def get_devices(self) -> list["Device"]:
         """
         Returns a list of all devices associated with a customer; will not include public devices!
         """

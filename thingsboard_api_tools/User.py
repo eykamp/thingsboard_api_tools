@@ -18,12 +18,8 @@
 from typing import Any
 from pydantic import Field
 
-try:
-    from .HasAttributes import HasAttributes
-    from .TbModel import Id, TbObject
-except (ModuleNotFoundError, ImportError):
-    from HasAttributes import HasAttributes
-    from TbModel import Id, TbObject
+from .HasAttributes import HasAttributes
+from .TbModel import Id, TbObject
 
 
 # Intended as a read-only model -- there's no reason to create these
@@ -40,7 +36,7 @@ class User(TbObject, HasAttributes):
 
 
     def __str__(self) -> str:
-        return "User (" + str(self.name or self.first_name + " " + self.last_name) + ", " + str(self.id.id) + ")"      # type: ignore
+        return "User (" + str(self.nice_name) + ", " + str(self.id.id) + ")"
 
 
     def __eq__(self, other: object) -> bool:
@@ -48,3 +44,15 @@ class User(TbObject, HasAttributes):
             return False
 
         return self.id == other.id
+
+
+    @property
+    def nice_name(self) -> str:
+        """ Returns a nice name for the user. """
+        if self.name:
+            return self.name
+        if self.first_name or self.last_name:
+            return ((self.first_name or "") + " " + (self.last_name or "")).strip()
+        if self.email:
+            return self.email
+        return "No Name"

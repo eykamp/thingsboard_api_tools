@@ -1,9 +1,9 @@
-from faker import Faker     # type: ignore
+from faker import Faker
 
 from thingsboard_api_tools.TbApi import TbApi
 from thingsboard_api_tools.Device import Device
 
-from config import mothership_url, thingsboard_username, thingsboard_password
+from .config import mothership_url, thingsboard_username, thingsboard_password
 
 assert mothership_url
 assert thingsboard_username
@@ -11,7 +11,7 @@ assert thingsboard_password
 
 tbapi = TbApi(url=mothership_url, username=thingsboard_username, password=thingsboard_password)
 
-fake = Faker()      # type: ignore
+fake = Faker()
 
 
 def test_get_all_devices():
@@ -24,14 +24,14 @@ def test_create_device():
     Also tests  get_device_by_name(name), get_server_attributes(), get_shared_attributes(), device.delete()
     """
     name = fake_device_name() + " " + fake.name()
-    server_attributes = fake.pydict(4, allowed_types=(str, int))    # type: ignore
-    shared_attributes = fake.pydict(4, allowed_types=(str, int))    # type: ignore
+    server_attributes = fake.pydict(4, allowed_types=(str, int))    # type: ignore (pydict)
+    shared_attributes = fake.pydict(4, allowed_types=(str, int))    # type: ignore (pydict)
 
     device = tbapi.create_device(
         name=name,
         type=fake.company(),
         label=fake.bban(),
-        additional_info=fake.pydict(3, allowed_types=(str, int, float)),            # type: ignore
+        additional_info=fake.pydict(3, allowed_types=(str, int, float)),            # type: ignore (pydict)
         customer=None,
         server_attributes=server_attributes,
         shared_attributes=shared_attributes,
@@ -69,8 +69,8 @@ def test_create_device_with_customer():
     Also tests  get_device_by_name(name)
     """
     name = fake_device_name() + " " + fake.name()
-    server_attributes = fake.pydict(4, allowed_types=(str, int))        # type: ignore
-    shared_attributes = fake.pydict(4, allowed_types=(str, int))        # type: ignore
+    server_attributes = fake.pydict(4, allowed_types=(str, int))    # type: ignore (pydict)
+    shared_attributes = fake.pydict(4, allowed_types=(str, int))    # type: ignore (pydict)
 
     customer = tbapi.get_all_customers()[0]
 
@@ -78,7 +78,7 @@ def test_create_device_with_customer():
         name=name,
         type=fake.company(),
         label=fake.bban(),
-        additional_info=fake.pydict(3, allowed_types=(str, int, float)),        # type: ignore
+        additional_info=fake.pydict(3, allowed_types=(str, int, float)),        # type: ignore (pydict)
         customer=customer,
         server_attributes=server_attributes,
         shared_attributes=shared_attributes,

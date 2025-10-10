@@ -1,7 +1,7 @@
-from faker import Faker     # type: ignore
+from faker import Faker
 
 from thingsboard_api_tools.TbApi import TbApi
-from config import mothership_url, thingsboard_username, thingsboard_password
+from .config import mothership_url, thingsboard_username, thingsboard_password
 
 assert mothership_url
 assert thingsboard_username
@@ -28,7 +28,9 @@ def test_get_dashboard_by_name():
     dashboard_header = tbapi.get_all_dashboard_headers()[0]
     assert dashboard_header
 
-    dash_header = tbapi.get_dashboard_by_name(dashboard_header.name)
+    name = dashboard_header.name
+    assert name
+    dash_header = tbapi.get_dashboard_by_name(name)
     assert dash_header == dashboard_header.get_dashboard()
 
 
@@ -144,8 +146,11 @@ def test_get_public_url():
     """ Also tests make_public() and make_private() """
     dash = tbapi.create_dashboard(fake_dash_name())
     assert dash.get_public_url() is None
+
     dash.make_public()
-    assert dash.get_public_url() and dash.get_public_url().startswith("http")       # type: ignore
+    puburl = dash.get_public_url()
+    assert puburl and puburl.startswith("http")
+
     dash.make_private()
     assert dash.get_public_url() is None
     assert dash.delete()
