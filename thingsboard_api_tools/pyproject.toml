@@ -1,6 +1,15 @@
 [project]
 name = "thingsboard_api_tools"
 version = "0.5"
+dependencies = [
+    "faker",
+    "pydantic",
+    "requests",
+    "pytest",
+    "pytz",
+    "setuptools",
+]
+
 
 [tool.pytest.ini_options]
 # pythonpath = "src"
@@ -9,3 +18,4 @@ pythonpath = ["."]
 addopts = [
     "--import-mode=importlib",
 ]
+
