@@ -7,3 +7,13 @@ exclude = [
     "thingsboard_api_tools/typings/**",
     "**/typings/**"
 ]
+
+[project]
+dependencies = [
+    "faker",
+    "pydantic",
+    "requests",
+    "pytest",
+    "pytz",
+    "setuptools",
+]
