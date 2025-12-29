@@ -1,6 +1,6 @@
 This is a complete rewrite of the code I released here a few years ago; it covers much the same ground, but is now based on Pydantic data models.
 
-For now: update with: 
+For now, update with: 
 
 `pip install git+git://github.com/eykamp/thingsboard_api_tools.git --upgrade`
 
