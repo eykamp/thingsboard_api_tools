@@ -1,4 +1,8 @@
-﻿[tool.ty]
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.ty]
 exclude = [
     "thingsboard_api_tools/typings/**",
     "**/typings/**"
