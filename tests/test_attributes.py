@@ -2,19 +2,11 @@ from typing import Any
 from faker import Faker
 from requests import HTTPError
 from datetime import datetime, timezone
+from tests.helpers import get_tbapi_from_env
 
-
-from thingsboard_api_tools.TbApi import TbApi
-
-from .config import mothership_url, thingsboard_username, thingsboard_password
-
-assert mothership_url
-assert thingsboard_username
-assert thingsboard_password
-
-tbapi = TbApi(url=mothership_url, username=thingsboard_username, password=thingsboard_password)
 
 fake = Faker()
+tbapi = get_tbapi_from_env()
 
 
 def test_server_attributes():

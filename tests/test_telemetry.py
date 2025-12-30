@@ -3,19 +3,13 @@ from datetime import datetime
 import time
 import json as Json
 
-from thingsboard_api_tools.TbApi import TbApi
 from thingsboard_api_tools.Device import prepare_ts
 from thingsboard_api_tools.TelemetryRecord import TelemetryRecord
+from tests.helpers import get_tbapi_from_env
 
-from .config import mothership_url, thingsboard_username, thingsboard_password
-
-assert mothership_url
-assert thingsboard_username
-assert thingsboard_password
-
-tbapi = TbApi(url=mothership_url, username=thingsboard_username, password=thingsboard_password)
 
 fake = Faker()
+tbapi = get_tbapi_from_env()
 
 
 def test_new_device_has_no_telemetry():

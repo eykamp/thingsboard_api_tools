@@ -8,6 +8,7 @@ dependencies = [
     "pytest",
     "pytz",
     "setuptools",
+    "python-dotenv"
 ]
 
 

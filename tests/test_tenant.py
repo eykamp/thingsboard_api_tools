@@ -1,14 +1,10 @@
 from requests import HTTPError
 
-from thingsboard_api_tools.TbApi import TbApi
-from .config import mothership_url, thingsboard_username, thingsboard_password
-
-assert mothership_url
-assert thingsboard_username
-assert thingsboard_password
+from tests.helpers import get_tbapi_from_env
 
 
-tbapi = TbApi(url=mothership_url, username=thingsboard_username, password=thingsboard_password)
+tbapi = get_tbapi_from_env()
+
 
 def test_get_all_tenants():
     try:

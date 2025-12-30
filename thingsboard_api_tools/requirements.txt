@@ -4,3 +4,4 @@ requests
 pytest
 pytz
 setuptools
+python-dotenv
