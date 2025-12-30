@@ -1,3 +1,4 @@
+# General
 *.pyc
 launch.json
 settings.json
@@ -6,7 +7,9 @@ vnv.bat
 typings/
 build/
 dist/
+uv.lock
 
 # Secrets
 config.py
 thingsboard_api_tools/config.py
+.env
