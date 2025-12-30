@@ -18,7 +18,7 @@
 from typing import  Dict, Any
 from datetime import datetime
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 import pytz
 from .TbApi import TbApi
 
@@ -31,11 +31,7 @@ class TbModel(BaseModel):
     Class from which all TbApi classes are descended.  BaseModel is a pydantic class that handles
     most of our dirty work such as encoding, decoding, and validating json streams.
     """
-    class Config:
-        arbitrary_types_allowed = True        # TODO: Can we get rid of this somehow?
-        # json_encoders: Dict[Any, Callable[[Any], Any]] = {      # TODO: json_encoders is deprecated
-        #     datetime: lambda v: int(v.timestamp() * 1000),     # TB expresses datetimes as epochs in milliseonds
-        # }
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def __repr__(self) -> str:
         return self.__str__()
