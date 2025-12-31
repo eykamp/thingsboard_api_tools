@@ -15,9 +15,10 @@
 # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-from typing import  Optional, Any, Union, Type, TypeVar, TYPE_CHECKING
+from typing import Optional, Any, Union, Type, TypeVar, TYPE_CHECKING
 
 import json as Json
+import operator
 import requests
 import time
 from http import HTTPStatus
@@ -32,7 +33,24 @@ if TYPE_CHECKING:
 MINUTES = 60
 
 
+class SortOrder:
+    ASC = ASCENDING = False
+    DESC = DESCENDING = True
+
+
 T = TypeVar("T", bound="TbObject")      # T can be any subclass of TbObject
+SortClause = Optional[Union[str, tuple[str, bool], list[str | tuple[str, bool]]]]
+"""
+SortClause:
+    Optional list of (field_name, sort_order) tuples, where sort_order is SortOrder.ASC or SortOrder.DESC.
+        e.g.: [("name", SortOrder.ASC), ("zip", SortOrder.DESCENDING)]
+    Could also be a list of fields (all ascending)
+        e.g. ["name", "zip"]
+    Even a string will work for simple cases:
+        e.g. "name" or "zip desc"
+    Id and tenant_id fields require special handling, but can also be used.
+"""
+
 
 class TbApi:
     NULL_GUID = "13814000-1dd2-11b2-8080-808080808080"      # From EntityId.java in TB codebase
@@ -88,11 +106,14 @@ class TbApi:
         return self.get_paged("/api/tenant/assets", "Error retrieving assets for tenant")
 
 
-    def get_tenant_devices(self):
+    def get_tenant_devices(self, sort_by: SortClause = None):
         """
-        Returns a list of all ecustdevices for current tenant
+        Returns a list of all devices for current tenant
         """
-        return self.get_paged("/api/tenant/devices", "Error retrieving devices for tenant")
+        from .Device import Device
+
+        all_results = self.get_paged("/api/tenant/devices", "Error retrieving devices for tenant")
+        return self.tb_objects_from_list(all_results, Device, sort_by)
 
 
     def get_public_user_id(self) -> "CustomerId | None":
@@ -134,14 +155,14 @@ class TbApi:
         return Dashboard.model_validate(obj | {"tbapi": self})
 
 
-    def get_all_dashboard_headers(self):
+    def get_all_dashboard_headers(self, sort_by: SortClause = None):
         """
         Return a list of all dashboards in the system
         """
         from .Dashboard import DashboardHeader
 
         all_results = self.get_paged("/api/tenant/dashboards", "Error fetching list of all dashboards")
-        return self.tb_objects_from_list(all_results, DashboardHeader)
+        return self.tb_objects_from_list(all_results, DashboardHeader, sort_by)
 
 
     def get_dashboard_headers_by_name(self, dash_name_prefix: str):
@@ -252,7 +273,7 @@ class TbApi:
         return Customer.model_validate(obj | {"tbapi": self})
 
 
-    def get_customers_by_name(self, cust_name_prefix: str):
+    def get_customers_by_name(self, cust_name_prefix: str, sort_by: SortClause = None):
         """
         Returns a list of all customers starting with the specified name
         """
@@ -260,14 +281,12 @@ class TbApi:
 
         cust_datas = self.get_paged(f"/api/customers?textSearch={cust_name_prefix}", f"Error retrieving customers with names starting with '{cust_name_prefix}'")
 
-        customers: list[Customer] = []
         for cust_data in cust_datas:
             # Sometimes this comes in as a dict, sometimes as a string.  Not sure why.
             if cust_data["additionalInfo"] is not None and not isinstance(cust_data["additionalInfo"], dict):
                 cust_data["additionalInfo"] = Json.loads(cust_data["additionalInfo"])
 
-            customers.append(Customer.model_validate(cust_data | {"tbapi": self}))
-        return customers
+        return self.tb_objects_from_list(cust_datas, Customer, sort_by)
 
 
     def get_customer_by_name(self, cust_name: str):
@@ -275,27 +294,27 @@ class TbApi:
         Returns a customer with the specified name, or None if we can't find one
         """
         customers = self.get_customers_by_name(cust_name)
-        return _exact_match(cust_name, customers)
+        return _exact_match_or_none(cust_name, customers)
 
 
-    def get_all_customers(self):
+    def get_all_customers(self, sort_by: SortClause = None):
         """
         Return a list of all customers in the system
         """
         from .Customer import Customer
 
         all_results = self.get_paged("/api/customers", "Error fetching list of all customers")
-        return self.tb_objects_from_list(all_results, Customer)
+        return self.tb_objects_from_list(all_results, Customer, sort_by)
 
 
-    def get_all_tenants(self):
+    def get_all_tenants(self, sort_by: SortClause = None):
         """
         Return a list of all tenants in the system
         """
         from .Tenant import Tenant
 
         all_results = self.get_paged("/api/tenants", "Error fetching list of all tenants")
-        return self.tb_objects_from_list(all_results, Tenant)
+        return self.tb_objects_from_list(all_results, Tenant, sort_by)
 
 
     def create_device(
@@ -339,7 +358,6 @@ class TbApi:
         return device
 
 
-
     def get_device_by_id(self, device_id: Union["Id", str]):
         """
         Returns an instantiated Device object device_id can be either an Id object or a guid
@@ -362,14 +380,14 @@ class TbApi:
         return Device(self, **obj)
 
 
-    def get_devices_by_name(self, device_name_prefix: str):
+    def get_devices_by_name(self, device_name_prefix: str, sort_by: SortClause = None):
         """
         Returns a list of all devices starting with the specified name
         """
         from .Device import Device
 
         data = self.get_paged(f"/api/tenant/devices?textSearch={device_name_prefix}", f"Error fetching devices with name matching '{device_name_prefix}'")
-        return self.tb_objects_from_list(data, Device)
+        return self.tb_objects_from_list(data, Device, sort_by)
 
 
     def get_device_by_name(self, device_name: str | None):
@@ -377,28 +395,32 @@ class TbApi:
         if device_name is None:     # Occasionally helpful
             return None
         devices = self.get_devices_by_name(device_name)
-        return _exact_match(device_name, devices)
+        return _exact_match_or_none(device_name, devices)
 
 
-    def get_devices_by_type(self, device_type: str):
+    def get_devices_by_type(self, device_type: str, sort_by: SortClause = None):
         from .Device import Device
 
         data = self.get(f"/api/tenant/devices?pageSize=99999&page=0&type={device_type}", f"Error fetching devices with type '{device_type}'")["data"]
-        return self.tb_objects_from_list(data, Device)
+        return self.tb_objects_from_list(data, Device, sort_by)
 
 
-    def get_all_devices(self):
+    def get_all_devices(self, sort_by: SortClause = None):
+        """
+        sort_by: Optional list of (field_name, sort_order) tuples, where sort_order is SortOrder.ASC or SortOrder.DESC.
+        """
+
         from .Device import Device
 
         all_results = self.get_paged("/api/tenant/devices", "Error fetching list of all Devices")
-        return self.tb_objects_from_list(all_results, Device)
+        return self.tb_objects_from_list(all_results, Device, sort_by)
 
 
-    def get_all_device_profiles(self):
+    def get_all_device_profiles(self, sort_by: SortClause = None):
         from .Device import DeviceProfile
 
         all_results = self.get_paged("/api/deviceProfiles", "Error fetching list of all DeviceProfiles")
-        return self.tb_objects_from_list(all_results, DeviceProfile)
+        return self.tb_objects_from_list(all_results, DeviceProfile, sort_by)
 
 
     def get_device_profile_by_id(self, device_profile_id: Union["Id", str]):
@@ -418,25 +440,25 @@ class TbApi:
         return DeviceProfile(tbapi=self, **obj)
 
 
-    def get_device_profiles_by_name(self, device_profile_name_prefix: str):
+    def get_device_profiles_by_name(self, device_profile_name_prefix: str, sort_by: SortClause = None):
         """ Returns a list of all DeviceProfiles starting with the specified name """
         from .DeviceProfile import DeviceProfile
 
         data = self.get_paged(f"/api/deviceProfiles?textSearch={device_profile_name_prefix}", f"Error fetching DeviceProfiles with name matching '{device_profile_name_prefix}'")
-        return self.tb_objects_from_list(data, DeviceProfile)
+        return self.tb_objects_from_list(data, DeviceProfile, sort_by)
 
 
     def get_device_profile_by_name(self, device_profile_name: str):
         """ Returns a DeviceProfile with the specified name, or None if we can't find one """
         device_profiles = self.get_device_profiles_by_name(device_profile_name)
-        return _exact_match(device_profile_name, device_profiles)
+        return _exact_match_or_none(device_profile_name, device_profiles)
 
 
-    def get_all_device_profile_infos(self):
+    def get_all_device_profile_infos(self, sort_by: SortClause = None):
         from .DeviceProfile import DeviceProfileInfo
 
         all_results = self.get_paged("/api/deviceProfileInfos", "Error fetching list of all DeviceProfileInfos")
-        return self.tb_objects_from_list(all_results, DeviceProfileInfo)
+        return self.tb_objects_from_list(all_results, DeviceProfileInfo, sort_by)
 
 
     def get_device_profile_info_by_id(self, device_profile_info_id: Union["Id", str]):
@@ -456,20 +478,20 @@ class TbApi:
         return DeviceProfileInfo(tbapi=self, **obj)
 
 
-    def get_device_profile_infos_by_name(self, device_profile_info_name_prefix: str):
+    def get_device_profile_infos_by_name(self, device_profile_info_name_prefix: str, sort_by: SortClause = None):
         """
         Returns a list of all DeviceProfileInfos starting with the specified name
         """
         from .DeviceProfile import DeviceProfileInfo
 
         data = self.get_paged(f"/api/deviceProfileInfos?textSearch={device_profile_info_name_prefix}", f"Error fetching DeviceProfileInfos with name matching '{device_profile_info_name_prefix}'")
-        return self.tb_objects_from_list(data, DeviceProfileInfo)
+        return self.tb_objects_from_list(data, DeviceProfileInfo, sort_by)
 
 
     def get_device_profile_info_by_name(self, device_profile_info_name: str):
         """ Returns a DeviceProfileInfo with the specified name, or None if we can't find one """
         device_profile_infos = self.get_device_profile_infos_by_name(device_profile_info_name)
-        return _exact_match(device_profile_info_name, device_profile_infos)
+        return _exact_match_or_none(device_profile_info_name, device_profile_infos)
 
 
     # # TODO: create Asset object
@@ -505,12 +527,12 @@ class TbApi:
         return self.get_current_user().tenant_id
 
 
-    def tb_objects_from_list(self, json_list: list[dict[str, Any]], object_type: Type[T]) -> list[T]:
-        """ Given a list of json strings and a type, return a list of rehydrated objects of that type. """
-        objects: list[T] = []
-        for jsn in json_list:
-            objects.append(object_type.model_validate(jsn | {"tbapi": self}))
-        return objects
+    def tb_objects_from_list(self, json_list: list[dict[str, Any]], object_type: Type[T], sort_by: SortClause = None) -> list[T]:
+        """
+        Given a list of json strings and a type, return a list of rehydrated objects of that type.
+        """
+        objects = [object_type.model_validate(jsn | {"tbapi": self}) for jsn in json_list]
+        return _multisort(objects, sort_by)
 
 
     # based off https://stackoverflow.com/questions/20658572/python-requests-print-entire-http-request-raw
@@ -640,7 +662,7 @@ class TokenError(Exception):
 
 U = TypeVar("U", "Customer", "Device", "DeviceProfile", "DeviceProfileInfo")
 
-def _exact_match(name: str, object_list: list[U]) -> Optional[U]:
+def _exact_match_or_none(name: str, object_list: list[U]) -> Optional[U]:
     matches: list[U] = []
     for obj in object_list:
         if obj.name == name:
@@ -655,3 +677,55 @@ def _exact_match(name: str, object_list: list[U]) -> Optional[U]:
             raise Exception(f"multiple matches were found for name {name}")
 
     return matches[0]
+
+
+# See https://stackoverflow.com/questions/61452346/python-attrgetter-that-handles-none-values-and-can-be-used-in-a-loop
+def _none_aware_attrgetter(attr: str):
+    """
+    Like attrgetter, but sorts None values last (instead of crashing).
+    Id and tenant_id field now handled by implicit id sorting.
+    """
+
+    from .TbModel import TbObject
+
+    getter = operator.attrgetter(attr)
+
+    def key_func(item: TbObject) -> tuple[bool, Any | None]:
+        value = getter(item)
+        return (value is None, value)
+    return key_func
+
+
+# See https://stackoverflow.com/questions/61452346/python-attrgetter-that-handles-none-values-and-can-be-used-in-a-loop
+def _multisort(lst: list[T], sorting: SortClause) -> list[T]:
+    """
+    sorting:
+        - str: single field name, optionally with " ASC" or " DESC" suffix
+        - tuple: (field_name, sort_order) where sort_order is True for descending, False for ascending
+        - list[str | tuple[str, bool]]: list of field names or (field, reverse) tuples
+        if a sort field has a None value, those items will be sorted last
+    """
+    if sorting is None:     # No sorting
+        return lst
+
+    if isinstance(sorting, (str, tuple)):
+        sorting = [sorting]
+
+
+    sort_params: list[tuple[str, bool]] = []
+    for sort_item in sorting:
+        if isinstance(sort_item, str):
+            sort_item = sort_item.strip().lower()
+            if " desc" in sort_item:        # desc, descend, descending
+                sort_item = sort_item.split()[0]
+                sort_params.append((sort_item, SortOrder.DESCENDING))
+            else:
+                sort_params.append((sort_item.split()[0], SortOrder.ASCENDING))
+        else:
+            sort_params.append(sort_item)
+
+    # Sort in reverse-parameter order to handle multi-level sort
+    for attr, reverse in reversed(sort_params):
+        lst.sort(key=_none_aware_attrgetter(attr), reverse=reverse)
+
+    return lst

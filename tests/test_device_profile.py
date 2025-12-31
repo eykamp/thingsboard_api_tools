@@ -8,6 +8,14 @@ def test_get_all_devices_profiles():
     tbapi.get_all_device_profiles()
 
 
+def test_device_profile_sort():
+    """ Confirm sorting mechanism has been implemented.  Complete sorting functionality tested in test_object_sorting. """
+    lst_1 = tbapi.get_all_device_profiles(sort_by="id asc")
+    lst_2 = tbapi.get_all_device_profiles(sort_by="id desc")
+
+    assert lst_1 == list(reversed(lst_2))
+
+
 def test_get_profile_from_device():
     dev = tbapi.get_all_devices()[0]
     assert dev

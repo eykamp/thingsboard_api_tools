@@ -6,15 +6,23 @@ from datetime import datetime, timezone
 
 from thingsboard_api_tools.Customer import Customer, CustomerId
 from thingsboard_api_tools.TbModel import Id
-from tests.helpers import get_tbapi_from_env
+import tests.helpers as helpers
 
 
 fake = Faker()
-tbapi = get_tbapi_from_env()
+tbapi = helpers.get_tbapi_from_env()
 
 
 def test_get_all_customers():
     tbapi.get_all_customers()
+
+
+def test_customer_sort():
+    """ Confirm sorting mechanism has been implemented.  Complete sorting functionality tested in test_object_sorting. """
+    lst_1 = tbapi.get_all_customers(sort_by="id asc")
+    lst_2 = tbapi.get_all_customers(sort_by="id desc")
+
+    assert lst_1 == list(reversed(lst_2))
 
 
 def test_customer_id():

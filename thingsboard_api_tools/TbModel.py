@@ -43,6 +43,15 @@ class Id(TbModel):
     entity_type: str = Field(alias="entityType")
 
 
+    def __lt__(self, other: Any):
+        """ Enable sorting. """
+
+        if isinstance(other, Id):
+            return self.id < other.id
+
+        return NotImplemented
+
+
     def __eq__(self, other: Any) -> bool:
         # from .Customer import CustomerId
 

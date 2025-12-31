@@ -20,6 +20,7 @@ from pydantic import Field       # pip install pydantic
 
 from .HasAttributes import HasAttributes
 from .TbModel import TbModel, Id, TbObject
+from .TbApi import SortClause
 
 
 if TYPE_CHECKING:
@@ -84,7 +85,7 @@ class Customer(TbObject, HasAttributes):
         return CustomerId(customerId=self.id, public=self.is_public(), title=self.name if self.name else "")    # type: ignore
 
 
-    def get_devices(self) -> list["Device"]:
+    def get_devices(self, sort_by: SortClause = None) -> list["Device"]:
         """
         Returns a list of all devices associated with a customer; will not include public devices!
         """
@@ -93,7 +94,7 @@ class Customer(TbObject, HasAttributes):
         cust_id = self.id.id
 
         all_results = self.tbapi.get_paged(f"/api/customer/{cust_id}/devices", f"Error retrieving devices for customer '{cust_id}'")
-        return self.tbapi.tb_objects_from_list(all_results, Device)       # Circular... Device gets defined below, but refers to Customer...
+        return self.tbapi.tb_objects_from_list(all_results, Device, sort_by)       # Circular... Device gets defined below, but refers to Customer...
 
 
     def delete(self) -> bool:

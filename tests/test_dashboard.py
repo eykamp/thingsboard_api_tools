@@ -11,6 +11,14 @@ def test_get_all_dashboards():
     tbapi.get_all_dashboard_headers()
 
 
+def test_dashboard_sort():
+    """ Confirm sorting mechanism has been implemented.  Complete sorting functionality tested in test_object_sorting. """
+    lst_1 = tbapi.get_all_dashboard_headers(sort_by="id asc")
+    lst_2 = tbapi.get_all_dashboard_headers(sort_by="id desc")
+
+    assert lst_1 == list(reversed(lst_2))
+
+
 def test_get_dashboard_by_id():
     dashboard = tbapi.get_all_dashboard_headers()[0]
     dash = tbapi.get_dashboard_header_by_id(dashboard.id.id)

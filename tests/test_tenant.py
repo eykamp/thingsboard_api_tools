@@ -13,6 +13,17 @@ def test_get_all_tenants():
         assert ex.response.status_code == 403          # If we don't have permissions, we can't test this
 
 
+def test_tenant_sort():
+    """ Confirm sorting mechanism has been implemented.  Complete sorting functionality tested in test_object_sorting. """
+    try:
+        lst_1 = tbapi.get_all_tenants(sort_by="id asc")
+        lst_2 = tbapi.get_all_tenants(sort_by="id desc")
+
+        assert lst_1 == list(reversed(lst_2))
+    except HTTPError as ex:
+        assert ex.response.status_code == 403          # If we don't have permissions, we can't test this
+
+
 def test_get_tenant_assets():
     tbapi.get_tenant_assets()
 

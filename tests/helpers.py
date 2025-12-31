@@ -1,8 +1,9 @@
 import os
 from dotenv import load_dotenv
+from typing import Any
+import json
 
 from thingsboard_api_tools.TbApi import TbApi
-
 
 load_dotenv()
 
@@ -23,3 +24,12 @@ def get_tbapi_from_env() -> TbApi:
     assert mothership_url and thingsboard_username and thingsboard_password, msg
 
     return TbApi(url=mothership_url, username=thingsboard_username, password=thingsboard_password)
+
+
+def mock_get_paged_customers(self: TbApi, params: str, msg: str) -> list[dict[str, Any]]:
+    """
+    Mock function to simulate TbApi.get_paged for customers with fixed data from file.  Much faster than the real deal.
+    """
+    with open("tests/data/customers_unsorted.json", "r", encoding="utf-8") as filex:
+        data = json.load(filex)
+        return data
