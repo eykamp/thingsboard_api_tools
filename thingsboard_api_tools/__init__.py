@@ -18,7 +18,7 @@
 # COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-from .TbApi import TbApi
+from .TbApi import TbApi, SortOrder
 from .TbModel import TbObject, TbModel, Id, Attributes
 from .Customer import Customer, CustomerId
 from .Dashboard import DashboardHeader, Dashboard
@@ -44,4 +44,5 @@ __all__ = [
     "TbModel",
     "TbObject",
     "TelemetryRecord",
+    "SortOrder",
 ]
