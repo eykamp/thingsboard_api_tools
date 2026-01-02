@@ -16,7 +16,7 @@
 # OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 from typing import  Optional, Dict, List, Any, Union, Iterable, TYPE_CHECKING
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 from pydantic import Field
 
@@ -171,12 +171,30 @@ class Device(TbObject, HasAttributes):
         return self.tbapi.get(f"/api/plugins/telemetry/DEVICE/{self.id.id}/keys/timeseries", f"Error retrieving telemetry keys for device '{self.id.id}'")
 
 
-    def get_latest_telemetry(self, keys: str | Iterable[str]) -> Dict[str, List[Dict[str, Any]]]:
+    def get_latest_telemetry(
+        self,
+        keys: str | Iterable[str],
+        time: timedelta | None = None,
+        limit: int = 100,
+    ) -> Dict[str, List[Dict[str, Any]]]:
         """
         Pass a single key, a stringified comma-separate list, a list object, or a tuple
         get_latest_telemetry(['datum_1', 'datum_2']) ==>
             {'datum_1': [{'ts': 1595897301000, 'value': '555'}], 'datum_2': [{'ts': 1595897301000, 'value': '666'}]}
+
+        If time is specified, only returns values newer than current time minus time delta (so time=timedelta(minutes=5) gets
+        values from the last 5 minutes).  If no values are found in that time range an empty dict is returned.
+
+        Limit parameter is only used if time is specified, and specifies the maximum number of records to return per key.
+        Defaults to 100.
         """
+
+        # If there's no timedelta specified, use API call intended for this purpose.  If a timedelta
+        # is specified (and is sensical), hand things off to get_telemetry():
+        if time and time >= timedelta(0):               # Ignore negative and zero time deltas
+            start_ts = datetime.now() - time
+            return self.get_telemetry(keys, start_ts=start_ts, limit=limit)
+
         if not isinstance(keys, str):
             keys = ",".join(keys)
 

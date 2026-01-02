@@ -1,9 +1,9 @@
 from faker import Faker
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import json as Json
 
-from thingsboard_api_tools.Device import prepare_ts
+from thingsboard_api_tools.Device import Device, prepare_ts
 from thingsboard_api_tools.TelemetryRecord import TelemetryRecord
 from tests.helpers import get_tbapi_from_env
 
@@ -94,6 +94,105 @@ def test_telemetry():
         dev.delete()
 
 
+def test_get_latest_telemetry_no_data_present():
+    """
+    Not terribly useful, but I wrote it while working something else out, and it documents this edge case.
+    """
+    dev: Device = tbapi.create_device(fake_device_name())
+    keys = [fake.last_name(), fake.last_name(), fake.last_name()]
+
+    try:
+        # First, what happens if we have no telemetry at all?  Should return an emptyish dict.
+        # {
+        #   'Griffin' = [{'ts': 1767382168999, 'value': None}],
+        #   'Moran'   = [{'ts': 1767382168996, 'value': None}],
+        #   'Snyder ' = [{'ts': 1767382168995, 'value': None}],
+        # }
+        data = dev.get_latest_telemetry(keys)
+        assert set(keys) == set(data.keys()), "Expected all requested keys to be present"
+        assert all(data[k][0]["value"] is None for k in keys), "Expected None values when no telemetry exists"
+        assert all(len(data[k]) == 1 for k in keys), "Expected single record per key when no telemetry exists"
+
+    finally:
+        dev.delete()
+
+
+def test_get_latest_telemetry_with_timedelta():
+    dev: Device = tbapi.create_device(fake_device_name())
+    keys = [fake.last_name(), fake.last_name(), fake.last_name()]
+    data = [(fake.pystr(), fake.pystr(), fake.pystr()) for _ in range(20)]   # Only test with str to avoid precision and .0 issues
+
+    try:
+        now = datetime.now()
+        ins_delta = timedelta(seconds=10)       # Insert points this far apart
+
+        # Insert a series of data rows, each 10 seconds apart, marching back from now() - 10s
+        # i.e. most recent data is 10s ago, then 20s ago, etc.
+        for i in range(len(data)):
+            dev.send_telemetry({keys[j]: data[i][j] for j in range(len(keys))}, ts=now - ins_delta * (i + 1))
+
+        latest = dev.get_latest_telemetry(keys)
+        assert latest == {keys[j]: [{"ts": prepare_ts(now - ins_delta), "value": data[0][j]}] for j in range(len(keys))}, "Latest data mismatch"
+
+        # The following tests will also confirm that get_latest_telemetry() with time param returns
+        # same data as fully parameterized call to get_telemetry()
+
+        # Most recent data was inserted 10 seconds ago, so getting latest with time=5s should return nothing
+        delta = timedelta(seconds=5)
+        latest = dev.get_latest_telemetry(keys, time=delta)
+        gettel = dev.get_telemetry(keys, start_ts=datetime.now() - delta)
+        assert latest == gettel == {}, "Expected no data when time delta is less than time of most recent inserted data"
+
+
+        # This request should get all data
+        points_to_get = len(data)
+        delta = timedelta(seconds=100000)
+        latest = dev.get_latest_telemetry(keys, time=delta)
+        gettel = dev.get_telemetry(keys, start_ts=datetime.now() - delta)
+
+        expected: dict[str, list[dict[str, str | int]]] = {
+            keys[j]: [
+                {"ts": prepare_ts(now - ins_delta * (i + 1)), "value": data[i][j]} for i in range(points_to_get)
+            ] for j in range(len(keys))
+        }
+        assert latest == gettel == expected, "Expected latest with large time delta to match full telemetry fetch"
+
+        # This request should get some, but not all data
+        points_to_get = 5
+        start_dt: datetime = now - ins_delta * points_to_get  # dt corresponding to <points_to_get> data points back
+
+        latest = dev.get_latest_telemetry(keys, time=datetime.now() - start_dt)
+        gettel = dev.get_telemetry(keys, start_ts=start_dt, end_ts=datetime.now())
+
+        # What we expect to get back
+        expected: dict[str, list[dict[str, str | int]]] = {
+            keys[j]: [
+                {"ts": prepare_ts(now - ins_delta * (i + 1)), "value": data[i][j]} for i in range(points_to_get)
+            ] for j in range(len(keys))
+        }
+
+        assert latest == gettel == expected, f"Expected to get last {points_to_get} data points"
+
+        # And verify that limit param works as expected (since we have everything all set up)
+        limit = 3
+        assert limit < points_to_get, "Limit should be less than points_to_get for this test"
+
+        latest = dev.get_latest_telemetry(keys, time=datetime.now() - start_dt, limit=limit)
+        gettel = dev.get_telemetry(keys, start_ts=start_dt, end_ts=datetime.now(), limit=limit)
+
+        # What we expect to get back
+        expected: dict[str, list[dict[str, str | int]]] = {
+            keys[j]: [
+                {"ts": prepare_ts(now - ins_delta * (i + 1)), "value": data[i][j]} for i in range(limit)
+            ] for j in range(len(keys))
+        }
+
+        assert latest == gettel == expected, f"Expected to get last {limit} data points"
+
+    finally:
+        dev.delete()
+
+
 def test_prepare_timestamp():
     t = datetime.now()
     e = prepare_ts(t)       # Converts datetimes...
@@ -117,4 +216,5 @@ def test_telemetry_record_serializer():
 
 
 def fake_device_name():
+    """ Returns a fake name with __TEST_DEV__ prefix to make it easy to identify test devices. """
     return "__TEST_DEV__ " + fake.name()
