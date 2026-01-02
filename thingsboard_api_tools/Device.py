@@ -109,7 +109,7 @@ class Device(TbObject, HasAttributes):
 
     def get_telemetry(
         self,
-        telemetry_keys: Union[str, Iterable[str]],
+        keys: Union[str, Iterable[str]],
         start_ts: Optional[Timestamp] = None,
         end_ts: Optional[Timestamp] = None,
         interval: Optional[int] = None,
@@ -117,13 +117,13 @@ class Device(TbObject, HasAttributes):
         agg: AggregationType = AggregationType.NONE,
     ) -> Dict[str, List[Dict[str, Any]]]:
         """
-        telemetry_keys: Pass a single key or a list of keys
+        keys: Pass a single key or a list of keys
         Note: Returns a sane amount of data by default, in same shape as get_latest_telemetry()
         """
-        if isinstance(telemetry_keys, str):
-            keys = telemetry_keys
+        if isinstance(keys, str):
+            keys = keys
         else:
-            keys = ",".join(telemetry_keys)
+            keys = ",".join(keys)
 
         # Don't include these in the signature because datetime.now() gets evaluated once when function is first called, then reused after that.
         # It's lame, but it's the way default values are managed in Python.  Blame Guido.
@@ -171,17 +171,15 @@ class Device(TbObject, HasAttributes):
         return self.tbapi.get(f"/api/plugins/telemetry/DEVICE/{self.id.id}/keys/timeseries", f"Error retrieving telemetry keys for device '{self.id.id}'")
 
 
-    def get_latest_telemetry(self, telemetry_keys: str | Iterable[str]) -> Dict[str, List[Dict[str, Any]]]:
+    def get_latest_telemetry(self, keys: str | Iterable[str]) -> Dict[str, List[Dict[str, Any]]]:
         """
         Pass a single key, a stringified comma-separate list, a list object, or a tuple
         get_latest_telemetry(['datum_1', 'datum_2']) ==>
             {'datum_1': [{'ts': 1595897301000, 'value': '555'}], 'datum_2': [{'ts': 1595897301000, 'value': '666'}]}
 
         """
-        if isinstance(telemetry_keys, str):
-            keys = telemetry_keys
-        else:
-            keys = ",".join(telemetry_keys)
+        if not isinstance(keys, str):
+            keys = ",".join(keys)
 
         use_strict_datatypes_clause = "&useStrictDataTypes=true"        # Fixes bug of getting back strings as numbers
         url = f"/api/plugins/telemetry/DEVICE/{self.id.id}/values/timeseries?keys={keys}{use_strict_datatypes_clause}"
