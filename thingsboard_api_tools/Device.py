@@ -176,7 +176,6 @@ class Device(TbObject, HasAttributes):
         Pass a single key, a stringified comma-separate list, a list object, or a tuple
         get_latest_telemetry(['datum_1', 'datum_2']) ==>
             {'datum_1': [{'ts': 1595897301000, 'value': '555'}], 'datum_2': [{'ts': 1595897301000, 'value': '666'}]}
-
         """
         if not isinstance(keys, str):
             keys = ",".join(keys)
