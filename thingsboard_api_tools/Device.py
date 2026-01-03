@@ -66,7 +66,7 @@ class Device(TbObject, HasAttributes):
     software_id: Optional[Id] = Field(alias="softwareId")
     firmware_id: Optional[Id] = Field(alias="firmwareId")
     device_profile_name: Optional[str] = Field(default=None, alias="deviceProfileName")
-    version: Optional[int]      # U64
+    version: Optional[int] = Field(default=None)    # Server increments this on each update
     customer_name: Optional[str] = Field(default=None, alias="customerTitle")
     customer_is_public: bool = Field(alias="customerIsPublic")
     active: bool
