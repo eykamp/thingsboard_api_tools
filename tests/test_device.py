@@ -40,28 +40,30 @@ def test_create_device():
         shared_attributes=shared_attributes,
     )
 
-    # Verify we can find the device
-    dev = tbapi.get_device_by_name(name)
-    assert dev
+    try:
 
-    assert device.model_dump() == dev.model_dump()
-    assert dev.customer_id.id  == TbApi.NULL_GUID                  # No customer specified gets null id
+        # Verify we can find the device
+        dev = tbapi.get_device_by_name(name)
+        assert dev
 
-    assert dev.tenant_id == tbapi.get_current_user().tenant_id     # Tenant get assigned to login id's tenant
+        assert device.model_dump() == dev.model_dump()
+        assert dev.customer_id.id  == TbApi.NULL_GUID                  # No customer specified gets null id
 
-    # Make sure our attributes got set
-    attrs = dev.get_server_attributes()
-    assert attrs["active"]      # Should be added by the server
-    for k, v in server_attributes.items():
-        assert attrs[k].value == v
+        assert dev.tenant_id == tbapi.get_current_user().tenant_id     # Tenant get assigned to login id's tenant
 
-    attrs = dev.get_shared_attributes()
-    for k, v in shared_attributes.items():
-        assert attrs[k].value == v
+        # Make sure our attributes got set
+        attrs = dev.get_server_attributes()
+        assert attrs["active"]      # Should be added by the server
+        for k, v in server_attributes.items():
+            assert attrs[k].value == v
 
-    # Cleanup
-    assert device.delete()
-    assert tbapi.get_device_by_name(name) is None
+        attrs = dev.get_shared_attributes()
+        for k, v in shared_attributes.items():
+            assert attrs[k].value == v
+
+    finally:    # Cleanup
+        assert device.delete()
+        assert tbapi.get_device_by_name(name) is None
 
 
 def test_create_device_with_customer():
@@ -89,43 +91,47 @@ def test_create_device_with_customer():
 
     dev = tbapi.get_device_by_name(name)
     assert dev
-    assert dev.customer_id == customer.id
-
-    assert device.delete()
+    try:
+        assert dev.customer_id == customer.id
+    finally:
+        assert device.delete()
 
 
 def test_make_public_and_is_public():
     device: Device = tbapi.create_device(name=fake_device_name())
-    assert device.get_customer() is None
-    assert not device.is_public()
+    try:
+        assert device.get_customer() is None
+        assert not device.is_public()
 
-    device.make_public()
-    assert device.is_public()
+        device.make_public()
+        assert device.is_public()
 
-    assert device.delete()     # Cleanup
-
+    finally:
+        assert device.delete()     # Cleanup
 
 def test_assign_to():
     device: Device = tbapi.create_device(name=fake_device_name())
-    assert device.get_customer() is None
+    try:
+        assert device.get_customer() is None
 
-    customer = tbapi.get_all_customers()[0]
-    assert customer
+        customer = tbapi.get_all_customers()[0]
+        assert customer
 
-    device.assign_to(customer)
-    assert device.get_customer() == customer
+        device.assign_to(customer)
+        assert device.get_customer() == customer
 
-    dev = tbapi.get_device_by_name(device.name)
-    assert dev
+        dev = tbapi.get_device_by_name(device.name)
+        assert dev
 
-    # Version number will change, so we'll blank that out before comparing:
-    assert device.version == 1 and dev.version == 2
-    device.version = dev.version = 0
-    assert dev == device
+        # Version number will change, so we'll blank that out before comparing:
+        assert device.version == 1 and dev.version == 2
+        device.version = dev.version = 0
+        assert dev == device
 
-    assert dev.get_customer() == customer
+        assert dev.get_customer() == customer
 
-    assert device.delete()     # Cleanup
+    finally:
+        assert device.delete()     # Cleanup
 
 
 def test_double_delete():
