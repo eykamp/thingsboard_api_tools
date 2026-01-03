@@ -117,7 +117,12 @@ def test_assign_to():
 
     dev = tbapi.get_device_by_name(device.name)
     assert dev
+
+    # Version number will change, so we'll blank that out before comparing:
+    assert device.version == 1 and dev.version == 2
+    device.version = dev.version = 0
     assert dev == device
+
     assert dev.get_customer() == customer
 
     assert device.delete()     # Cleanup

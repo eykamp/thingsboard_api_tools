@@ -112,7 +112,7 @@ class TbApi:
         """
         from .Device import Device
 
-        all_results = self.get_paged("/api/tenant/devices", "Error retrieving devices for tenant")
+        all_results = self.get_paged("/api/tenant/deviceInfos", "Error retrieving devices for tenant")
         return self.tb_objects_from_list(all_results, Device, sort_by)
 
 
@@ -332,8 +332,6 @@ class TbApi:
     ):
         """ Factory method. """
 
-        from .Device import Device
-
         data: dict[str, Any] = {
             "name": name,
             "label": label,
@@ -344,7 +342,10 @@ class TbApi:
         device_json = self.post("/api/device", data, "Error creating new device")
         # https://demo.thingsboard.io/swagger-ui.html#/device-controller/saveDeviceUsingPOST
 
-        device = Device(tbapi=self, **device_json)
+        # device = Device(tbapi=self, **device_json)
+        # Now that we're using the richer DeviceInfo as the basis for our device, we need to make an
+        # additional call to get it rather than just reconsituting the return data from device.
+        device = self.get_device_by_id(device_json["id"]["id"])
 
         if customer:
             device.assign_to(customer)
@@ -369,7 +370,7 @@ class TbApi:
             device_id = device_id.id
         # otherwise, assume device_id is a guid
 
-        obj = self.get(f"/api/device/{device_id}", f"Could not retrieve Device with id '{device_id}'")
+        obj = self.get(f"/api/device/info/{device_id}", f"Could not retrieve Device with id '{device_id}'")
 
         # This hack is to fix a bug in TB 3.2 (and probably earlier) where customer_id comes back with NULL_GUID
         if obj["customerId"]["id"] == TbApi.NULL_GUID:
@@ -386,7 +387,7 @@ class TbApi:
         """
         from .Device import Device
 
-        data = self.get_paged(f"/api/tenant/devices?textSearch={device_name_prefix}", f"Error fetching devices with name matching '{device_name_prefix}'")
+        data = self.get_paged(f"/api/tenant/deviceInfos?textSearch={device_name_prefix}", f"Error fetching devices with name matching '{device_name_prefix}'")
         return self.tb_objects_from_list(data, Device, sort_by)
 
 
@@ -401,7 +402,7 @@ class TbApi:
     def get_devices_by_type(self, device_type: str, sort_by: SortClause = None):
         from .Device import Device
 
-        data = self.get(f"/api/tenant/devices?pageSize=99999&page=0&type={device_type}", f"Error fetching devices with type '{device_type}'")["data"]
+        data = self.get(f"/api/tenant/deviceInfos?pageSize=99999&page=0&type={device_type}", f"Error fetching devices with type '{device_type}'")["data"]
         return self.tb_objects_from_list(data, Device, sort_by)
 
 
@@ -412,7 +413,7 @@ class TbApi:
 
         from .Device import Device
 
-        all_results = self.get_paged("/api/tenant/devices", "Error fetching list of all Devices")
+        all_results = self.get_paged("/api/tenant/deviceInfos", "Error fetching list of all Devices")
         return self.tb_objects_from_list(all_results, Device, sort_by)
 
 

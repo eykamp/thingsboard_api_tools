@@ -42,6 +42,19 @@ class AggregationType(Enum):
     NONE = "NONE"
 
 
+# class Configuration():
+#     configuration: Dict[str, Any]
+#     transport_configuration: Dict[str, Any] = Field(alias="transportConfiguration")
+    #     "transportConfiguration": {
+    #     "type": "string",
+    #     "powerMode": "PSM",
+    #     "psmActivityTimer": 0,
+    #     "edrxCycle": 0,
+    #     "pagingTransmissionWindow": 0
+    #     }
+    # 'deviceData' = {'configuration': {'type': 'DEFAULT'}, 'transportConfiguration': {'type': 'DEFAULT'}}
+
+
 class Device(TbObject, HasAttributes):
     additional_info: Optional[Dict[str, Any]] = Field(default={}, alias="additionalInfo")
     tenant_id: Id = Field(alias="tenantId")
@@ -50,10 +63,17 @@ class Device(TbObject, HasAttributes):
     type: Optional[str]
     label: Optional[str]
     device_profile_id: Id = Field(alias="deviceProfileId")
-    software_id: Optional[str] = Field(alias="softwareId")
-    firmware_id: Optional[str] = Field(alias="firmwareId")
+    software_id: Optional[Id] = Field(alias="softwareId")
+    firmware_id: Optional[Id] = Field(alias="firmwareId")
+    device_profile_name: Optional[str] = Field(default=None, alias="deviceProfileName")
+    version: Optional[int]      # U64
+    customer_name: Optional[str] = Field(default=None, alias="customerTitle")
+    customer_is_public: bool = Field(alias="customerIsPublic")
+    active: bool
+    configuration: dict[str, dict[str, Any]] = Field(alias="deviceData")        # This can be modeled as a Configuration, above
 
     _device_token: Optional[str] = None
+
 
     def __type_hints__(self, device_token: str):
         """ Dummy method to annotate the instance attribute types """
@@ -76,6 +96,7 @@ class Device(TbObject, HasAttributes):
         if self.customer_id != customer.id:
             obj = self.tbapi.post(f"/api/customer/{customer.id.id}/device/{self.id.id}", None, f"Error assigning device '{self.id.id}' to customer {customer}")
             self.customer_id = Id.model_validate(obj["customerId"])
+            self.customer_name = customer.name
 
 
     def get_customer(self) -> Optional["Customer"]:
