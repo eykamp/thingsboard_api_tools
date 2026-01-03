@@ -134,6 +134,49 @@ def test_assign_to():
         assert device.delete()     # Cleanup
 
 
+def test_filter_by_active():
+    """
+    Typically, all devices on TB server are inactive.  If you are running tests on a server where
+    all devices are active, this test may fail and need to be modified to ensure at least one active
+    and one inactive device exist.
+
+    But in most cases this will be fine.
+    """
+    all_devices = tbapi.get_all_devices()
+
+    if not any(d.active for d in all_devices):
+        # Find an inactive device:
+        dev = None
+        for dev in all_devices:
+            if not dev.active:
+                break
+
+        assert dev, "If this ever trips we may need to create an inactive device for the test"
+
+        dev.send_telemetry({"active_test_delete_me": 1})  # Insert a bit of telemetry to make device active
+
+        all_devices = tbapi.get_all_devices()
+        assert any(d.active for d in all_devices), "Failed to make at least one device active for the test"
+
+    # API counts
+    active_devices = tbapi.get_all_devices(is_active=True)
+    inactive_devices = tbapi.get_all_devices(is_active=False)
+
+    # Manual counts
+    active_count = sum(1 for d in all_devices if d.active)
+    inactive_count = sum(1 for d in all_devices if not d.active)
+
+    # Make sure results from the API match manual counts
+    assert active_count > 0 and inactive_count > 0, "If this trips, may need to modify test to ensure active and inactive devices"
+    assert len(all_devices) > 0 and len(active_devices) > 0 and len(inactive_devices) > 0
+    assert len(all_devices) == len(active_devices) + len(inactive_devices)
+    assert active_count == len(active_devices)
+    assert inactive_count == len(inactive_devices)
+
+    # And ensure we didn't break sorting because we're now handling multiple parameters
+    all_devices = tbapi.get_all_devices(is_active=True, sort_by="id asc")
+
+
 def test_double_delete():
     device: Device = tbapi.create_device(name=fake_device_name())
     assert device.delete()          # Device exists: Return True

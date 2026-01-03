@@ -98,6 +98,22 @@ def test_sorting_with_bad_key():
         assert False
 
 
+def test_sorting_device_by_active_status():
+    """
+    We're essentially testing that boolean sorting works in our modified order, with True before False.
+    """
+    devices = tbapi.get_all_devices()
+
+    if not any(d.active for d in devices):
+        # All devices are inactive; make one active for the test
+        devices[0].send_telemetry({"active_test_delete_me": 1})
+
+    devices = tbapi.get_all_devices(sort_by="active")        # Puts active devices first
+
+    active = [d.active for d in devices]
+    assert active == sorted(active, reverse=True)    # Python sorts bools with False before True by default, so reverse it
+
+
 def sort(unsorted: list[tuple[Any | None, ...]], index: int, reverse: bool):
     """ Not easy to use, but only needed here, for testing. """
     return sorted(unsorted, key=lambda x: ((x[index] is None, x[index])), reverse=reverse)

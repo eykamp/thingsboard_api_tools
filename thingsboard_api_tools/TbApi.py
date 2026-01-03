@@ -406,14 +406,21 @@ class TbApi:
         return self.tb_objects_from_list(data, Device, sort_by)
 
 
-    def get_all_devices(self, sort_by: SortClause = None):
+    def get_all_devices(self, is_active: Optional[bool] = None, sort_by: SortClause = None):
         """
+        is_active: Filter by active status if specified
         sort_by: Optional list of (field_name, sort_order) tuples, where sort_order is SortOrder.ASC or SortOrder.DESC.
         """
-
         from .Device import Device
 
-        all_results = self.get_paged("/api/tenant/deviceInfos", "Error fetching list of all Devices")
+        if is_active == True:       # noqa: E712
+            active_clause = "?active=true"
+        elif is_active == False:    # noqa: E712
+            active_clause = "?active=false"
+        else:
+            active_clause = ""
+
+        all_results = self.get_paged(f"/api/tenant/deviceInfos{active_clause}", "Error fetching list of all Devices")
         return self.tb_objects_from_list(all_results, Device, sort_by)
 
 
@@ -693,6 +700,8 @@ def _none_aware_attrgetter(attr: str):
 
     def key_func(item: TbObject) -> tuple[bool, Any | None]:
         value = getter(item)
+        if isinstance(value, bool):
+            return (False, not value)    # sort bools with True first, then False, which is opposite of Python default order
         return (value is None, value)
     return key_func
 
@@ -711,7 +720,6 @@ def _multisort(lst: list[T], sorting: SortClause) -> list[T]:
 
     if isinstance(sorting, (str, tuple)):
         sorting = [sorting]
-
 
     sort_params: list[tuple[str, bool]] = []
     for sort_item in sorting:
