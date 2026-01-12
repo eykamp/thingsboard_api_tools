@@ -718,19 +718,20 @@ def _multisort(lst: list[T], sorting: SortClause) -> list[T]:
     if sorting is None:     # No sorting
         return lst
 
-    if isinstance(sorting, (str, tuple)):
+    sort_params: list[tuple[str, bool]] = []
+
+    if isinstance(sorting, (str, tuple)):        # Make sure we have a list to iterate over below
         sorting = [sorting]
 
-    sort_params: list[tuple[str, bool]] = []
     for sort_item in sorting:
         if isinstance(sort_item, str):
             sort_item = sort_item.strip().lower()
+
             if " desc" in sort_item:        # desc, descend, descending
-                sort_item = sort_item.split()[0]
-                sort_params.append((sort_item, SortOrder.DESCENDING))
+                sort_params.append((sort_item.split()[0], SortOrder.DESCENDING))
             else:
                 sort_params.append((sort_item.split()[0], SortOrder.ASCENDING))
-        else:
+        else:       # We have a tuple that, hopefully, looks like what we're creating above
             sort_params.append(sort_item)
 
     # Sort in reverse-parameter order to handle multi-level sort
